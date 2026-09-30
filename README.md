@@ -16,6 +16,16 @@ Benefit renewal letters bury the important parts — a due date, a checked box, 
 - Distinguishes date types: notice date ≠ response deadline ≠ benefit end date ≠ appointment ≠ "within N days" processing windows.
 - Scanned/image-only PDFs get an explicit "can't read this" warning — no OCR guessing, no silent failure.
 
+## Demo
+
+- **Video walkthrough (2:06, narrated):** [docs/video/fineprint-walkthrough.mp4](docs/video/fineprint-walkthrough.mp4) — hero → the real Texas H1830-R sample (its due-date field is blank: Fineprint says *not stated*, quotes verbatim) → evidence click-through → conditional documents → synthetic conflicting-dates flag.
+- **Live demo:** served by GitHub Pages from `main` (see Actions → pages deployment for the URL).
+
+| | |
+|---|---|
+| ![hero](docs/screenshots/hero.png) | ![official checklist](docs/screenshots/official-checklist.png) |
+| ![blank due date refused](docs/screenshots/deadline-not-stated.png) | ![synthetic conflict flagged](docs/screenshots/synthetic-conflict.png) |
+
 ## Run it
 
 ```bash
