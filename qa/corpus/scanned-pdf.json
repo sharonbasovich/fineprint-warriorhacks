@@ -1,0 +1,15 @@
+{
+  "id": "scanned-pdf",
+  "description": "Blank/image-only PDF (no text layer). Must produce an explicit unsupported-document warning instead of pretending to read it.",
+  "input": { "kind": "pdf", "path": "qa/fixtures/scanned-blank.pdf" },
+  "expect": {
+    "docWarningsContains": "scanned",
+    "items": [
+      { "category": "not-said", "status": "warning", "titleContains": "Unreadable" }
+    ],
+    "forbidden": [
+      { "status": "deadline" },
+      { "category": "do" }
+    ]
+  }
+}

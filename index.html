@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fineprint — what does this letter actually ask?</title>
+    <meta
+      name="description"
+      content="Fineprint turns a confusing benefits-renewal notice into a plain-language checklist where every answer cites the exact sentence it came from."
+    />
+  </head>
+  <body>
+    <header class="hero">
+      <p class="eyebrow">Fineprint</p>
+      <h1>A confusing letter just arrived.<br /><span class="accent">One missed date could matter.</span></h1>
+      <p class="hook">
+        Fineprint reads a benefits-renewal notice and turns it into a plain-language checklist —
+        every action, deadline and required paper linked to the exact sentence it came from.
+        And when the letter doesn't say something, Fineprint says that too.
+      </p>
+      <div class="hero-actions">
+        <button id="try-demo" class="primary">Try it on a real renewal notice</button>
+        <a class="ghost" href="#how">How it works</a>
+      </div>
+      <p class="privacy-badge">Everything runs in your browser. Your letter never leaves this page.</p>
+    </header>
+
+    <main>
+      <section class="input-card" aria-labelledby="input-heading">
+        <h2 id="input-heading">Pick a notice</h2>
+        <div class="input-grid">
+          <div>
+            <label for="sample-select" class="field-label">Try a bundled sample</label>
+            <select id="sample-select">
+              <option value="" disabled selected>Choose a sample…</option>
+            </select>
+            <p id="sample-blurb" class="muted" aria-live="polite"></p>
+          </div>
+          <div class="dropzone-wrap">
+            <label class="field-label" for="file-input">Open your own file</label>
+            <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Drop a PDF or text file here, or press Enter to browse">
+              <strong>Drop a PDF or .txt here</strong>
+              <span>or press Enter / click to browse</span>
+              <span class="muted small">PDFs are read locally with pdf.js. Scanned (image-only) PDFs will be flagged, not guessed.</span>
+            </div>
+            <input id="file-input" type="file" accept=".pdf,.txt,.text" hidden />
+          </div>
+          <div>
+            <label for="paste" class="field-label">…or paste the letter's text</label>
+            <textarea id="paste" rows="4" placeholder="Paste the text of a benefits or renewal notice here."></textarea>
+            <button id="analyze-paste" class="secondary">Read pasted text</button>
+          </div>
+        </div>
+        <p id="status-line" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="results" class="results" hidden aria-label="Analysis results">
+        <div class="results-head">
+          <div>
+            <h2 id="doc-title">Checklist</h2>
+            <p id="doc-sub" class="muted"></p>
+          </div>
+          <div id="program-chips" class="program-chips" aria-label="Programs named in this notice"></div>
+        </div>
+        <div id="warnings" class="warnings"></div>
+        <div class="panes">
+          <div class="pane source-pane">
+            <h3>The notice</h3>
+            <p class="muted small">Click any evidence quote on the right to jump to the exact line here.</p>
+            <div id="source-view" class="source-view" tabindex="0"></div>
+          </div>
+          <div class="pane checklist-pane">
+            <h3>Your checklist</h3>
+            <div id="checklist"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how" class="how">
+        <h2>How it works</h2>
+        <ol>
+          <li><strong>Reads the letter in your browser.</strong> Text extraction happens locally — nothing is uploaded, and no AI service is called.</li>
+          <li><strong>Finds what the letter asks.</strong> Renewal methods, due-date wording, the checked programs, and each required or conditional document.</li>
+          <li><strong>Links every answer to its sentence.</strong> Each checklist item shows the exact quote and page it came from.</li>
+          <li><strong>Admits what isn't there.</strong> A blank due date stays "not stated" — Fineprint never invents a deadline or assumes an unchecked program.</li>
+        </ol>
+        <p class="muted">
+          Fineprint is a document-comprehension demo, not legal aid and not a government service.
+          It makes no eligibility, medical, or legal decisions. Synthetic samples are clearly labeled;
+          the bundled real sample is a public Texas HHSC form linked in the source manifest.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Built for WarriorHacks 2.0 (Hackathon track) by Sharon Basovich with Devin (AI) assistance —
+        see README for attribution and limitations.
+      </p>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

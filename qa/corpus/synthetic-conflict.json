@@ -1,0 +1,19 @@
+{
+  "id": "synthetic-conflict",
+  "description": "Synthetic notice stating two different response deadlines (online vs paper). Must surface a conflict, never pick one.",
+  "input": { "kind": "sample", "id": "synthetic-conflict" },
+  "expect": {
+    "programs": [
+      { "name": "SNAP", "state": "checked" },
+      { "name": "Health Care", "state": "checked" },
+      { "name": "TANF", "state": "unchecked" }
+    ],
+    "items": [
+      { "category": "dates", "status": "deadline-conflict", "titleContains": "Conflicting", "detailContains": "07/15/2027" }
+    ],
+    "forbidden": [
+      { "status": "deadline", "titleContains": "Respond by" },
+      { "status": "deadline", "titleContains": "Letter printed on 06/10" }
+    ]
+  }
+}

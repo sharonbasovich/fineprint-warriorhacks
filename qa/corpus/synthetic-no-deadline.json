@@ -1,0 +1,19 @@
+{
+  "id": "synthetic-no-deadline",
+  "description": "Synthetic notice where no program is checked and no due date is printed. Must abstain on both.",
+  "input": { "kind": "sample", "id": "synthetic-blank" },
+  "expect": {
+    "programs": [
+      { "name": "SNAP", "state": "unchecked" },
+      { "name": "TANF", "state": "unchecked" },
+      { "name": "Health Care", "state": "unchecked" }
+    ],
+    "items": [
+      { "category": "dates", "status": "deadline-unknown", "titleContains": "not stated" }
+    ],
+    "forbidden": [
+      { "status": "deadline", "titleContains": "Respond by" },
+      { "status": "deadline", "titleContains": "08/20" }
+    ]
+  }
+}

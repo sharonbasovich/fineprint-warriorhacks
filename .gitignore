@@ -1,0 +1,8 @@
+node_modules/
+dist/
+qa/report/
+*.local
+.DS_Store
+public/samples/h1830r-official-sample.generated.txt
+tools/H1830-R.pdf
+public/pdfjs/

@@ -1,0 +1,24 @@
+{
+  "id": "synthetic-dated",
+  "description": "Synthetic notice with one explicit due date AND a separate benefit-end date in the same due section. The due date must be the deadline; the end date must be classified benefit-end, NOT a conflict.",
+  "input": { "kind": "sample", "id": "synthetic-dated" },
+  "expect": {
+    "programs": [
+      { "name": "SNAP", "state": "checked" },
+      { "name": "TANF", "state": "unchecked" },
+      { "name": "Health Care", "state": "unchecked" }
+    ],
+    "items": [
+      { "category": "dates", "status": "deadline", "titleContains": "Respond by 04/03/2027", "evidenceContains": "due by 04/03/2027" },
+      { "category": "dates", "status": "deadline", "titleContains": "Benefits may end 04/30/2027" },
+      { "category": "dates", "status": "info", "titleContains": "Letter printed on 03/04/2027" },
+      { "category": "documents", "status": "conditional", "titleContains": "Housing costs", "detailContains": "only if you are applying for SNAP" },
+      { "category": "documents", "status": "info", "titleContains": "Proof of income" }
+    ],
+    "forbidden": [
+      { "status": "deadline-conflict" },
+      { "status": "deadline-unknown" },
+      { "status": "deadline", "titleContains": "03/04" }
+    ]
+  }
+}

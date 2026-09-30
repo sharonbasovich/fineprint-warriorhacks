@@ -1,0 +1,16 @@
+{
+  "id": "malformed-input",
+  "description": "Garbage text input. Must not crash, must not emit a deadline, and must warn that little readable content was found.",
+  "input": { "kind": "text", "text": "asdkfj qwpoiru\nxzcv" },
+  "expect": {
+    "items": [
+      { "category": "not-said", "status": "warning", "titleContains": "Unreadable" },
+      { "category": "not-said", "status": "unknown", "titleContains": "No due-date" }
+    ],
+    "forbidden": [
+      { "status": "deadline" },
+      { "category": "documents" },
+      { "category": "do" }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "fineprint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fineprint turns a benefits-renewal notice into a plain-language checklist where every answer cites the exact sentence and page it came from.",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/prepare-pdfjs.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/prepare-pdfjs.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "eval": "tsx qa/run-eval.ts",
+    "extract:sample": "tsx tools/extract-official-sample.ts"
+  },
+  "dependencies": {
+    "pdfjs-dist": "5.4.624"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "eslint": "9.39.5",
+    "globals": "^17.12.0",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.0",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

@@ -1,0 +1,418 @@
+/**
+ * Deterministic, source-grounded analysis of a benefits-renewal notice.
+ * Every emitted claim carries evidence (page + line + exact quote).
+ * When the notice does not state something, we say so — we never infer it.
+ */
+import { allDateMentions } from "./dates";
+import type {
+  AnalysisResult,
+  ChecklistItem,
+  Evidence,
+  ItemCategory,
+  ItemStatus,
+  NoticeDocument,
+  ProgramEntry,
+  ProgramState,
+  SourceLine
+} from "./types";
+
+let nextId = 0;
+function item(
+  category: ItemCategory,
+  status: ItemStatus,
+  title: string,
+  evidence: Evidence[],
+  detail?: string
+): ChecklistItem {
+  return { id: `it-${nextId++}`, category, status, title, evidence, ...(detail ? { detail } : {}) };
+}
+
+function ev(line: SourceLine): Evidence {
+  return { page: line.page, lineIndex: line.lineIndex, quote: line.text };
+}
+
+const CHECK_MARK_SENTENCE = /check[\s-]?mark|check(ed)?\s+next|benefits you need to renew/i;
+const DUE_SECTION = /\bdue\s*dates?\b|\bdeadline\b|\bdue\s+by\b|\brespond\s+by\b/i;
+const NEED_ITEMS =
+  /items we need|things we need|verifications? (we need|you (must|need) (to )?(send|provide))|documents? (we need|you (must|need) (to )?(send|provide))|proof we need/i;
+const RIGHTS = /\byour rights\b/i;
+const CONSEQUENCE =
+  /(might|may|could|will) not get (your )?benefits|benefits? (might|may|could|will) (end|stop)|lose (your )?benefits/i;
+const RENEW_INTRO = /time to renew|renew your benefits|renewal notice/i;
+const ONLINE_METHOD = /online|\.gov|\.com\b|website|log\s?in/i;
+const MAIL_METHOD = /\bby mail|mail (the|this|your)|pre-paid envelope|return (the|this|your) form/i;
+const FAX_METHOD = /\bfax/i;
+const PHONE = /(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\b\d-\d-\d\b|\b\d-\d{3}-\d{3}-\d{4}\b)/;
+const NOTICE_DATE_LINE = /^date\s*:/i;
+
+const KNOWN_PROGRAMS = [
+  "CHIP Perinatal",
+  "Health Care",
+  "Medicaid",
+  "Medicare Savings",
+  "Healthy Texas Women",
+  "Long-Term Care",
+  "Food Stamps",
+  "TANF",
+  "SNAP",
+  "CHIP",
+  "SSI",
+  "WIC"
+];
+
+const CHECKED_MARK = /(?:\[\s*[xX✓✔]\s*\]|\(\s*[xX✓✔]\s*\)|[☒☑✅])\s*$/;
+const UNCHECKED_MARK = /(?:\[\s*\]|\(\s*\)|[☐□◻])\s*$/;
+
+const BULLET = /^\s*(?:[•◦▪*‣·]|–|-(?=\s)|\d{1,2}[.)])\s+/;
+
+function isBullet(text: string): boolean {
+  return BULLET.test(text);
+}
+
+function stripBullet(text: string): string {
+  return text.replace(BULLET, "").trim();
+}
+
+function looksLikeSectionHeader(text: string): boolean {
+  const t = text.trim();
+  if (t.length === 0 || t.length > 60) return false;
+  if (isBullet(t)) return false;
+  return /:\s*$/.test(t) || /^[A-Z][A-Za-z ]{3,50}$/.test(t);
+}
+
+function collectLines(lines: SourceLine[], startIdx: number, maxLines: number): SourceLine[] {
+  return lines.slice(startIdx, Math.min(lines.length, startIdx + maxLines));
+}
+
+/** gather bullet items starting after `startIdx` until a new section header */
+function collectBullets(
+  lines: SourceLine[],
+  startIdx: number,
+  maxLines = 60
+): { text: string; lines: SourceLine[] }[] {
+  const bullets: { text: string; lines: SourceLine[] }[] = [];
+  let cur: { text: string; lines: SourceLine[] } | null = null;
+  let consumed = 0;
+  for (let i = startIdx; i < lines.length && consumed < maxLines; i++) {
+    const line = lines[i]!;
+    consumed++;
+    if (isBullet(line.text)) {
+      if (cur) bullets.push(cur);
+      cur = { text: stripBullet(line.text), lines: [line] };
+    } else if (cur) {
+      if (
+        looksLikeSectionHeader(line.text) &&
+        !/^(and|or|the|a|an|that|which|to|for|if|you|it|in|of|must)\b/i.test(line.text)
+      ) {
+        break;
+      }
+      cur.text += " " + line.text.trim();
+      cur.lines.push(line);
+    } else {
+      if (looksLikeSectionHeader(line.text)) break;
+      if (consumed > 8) break;
+    }
+  }
+  if (cur) bullets.push(cur);
+  return bullets;
+}
+
+/** Extract "(only if ...)" conditions, counting paren depth so nested parens work. */
+function conditionOf(text: string): string | null {
+  const start = text.search(/\(\s*only\b/i);
+  if (start >= 0) {
+    let depth = 0;
+    for (let i = start; i < text.length; i++) {
+      if (text[i] === "(") depth++;
+      else if (text[i] === ")") {
+        depth--;
+        if (depth === 0) {
+          return text.slice(start + 1, i).trim();
+        }
+      }
+    }
+    return text.slice(start + 1).replace(/\)+$/, "").trim();
+  }
+  const m2 = text.match(/\b(only\s+(if|when|for)\b[^.:]*)/i);
+  return m2 ? m2[1]!.trim() : null;
+}
+
+function docItemTitle(text: string): string {
+  const colon = text.indexOf(":");
+  const paren = text.indexOf("(");
+  let cut = -1;
+  for (const c of [colon, paren]) {
+    if (c > 0 && (cut < 0 || c < cut)) cut = c;
+  }
+  if (cut > 0 && cut < 80) return text.slice(0, cut).trim();
+  return text.split(/\s+/).slice(0, 8).join(" ").replace(/[,;:]$/, "");
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+}
+
+/**
+ * Find program names in a line and read the checkbox marker that precedes
+ * each occurrence (e.g. "[x] SNAP [ ] TANF"). No marker => undetermined.
+ */
+function findProgramsInLine(text: string): { name: string; state: ProgramState }[] {
+  const out: { name: string; state: ProgramState }[] = [];
+  for (const name of KNOWN_PROGRAMS) {
+    const re = new RegExp(`\\b${escapeRe(name)}\\b`, "gi");
+    for (const m of text.matchAll(re)) {
+      const idx = m.index ?? 0;
+      const prefix = text.slice(Math.max(0, idx - 12), idx);
+      let state: ProgramState = "undetermined";
+      if (CHECKED_MARK.test(prefix)) state = "checked";
+      else if (UNCHECKED_MARK.test(prefix)) state = "unchecked";
+      out.push({ name, state });
+      break; // first occurrence only
+    }
+  }
+  return out;
+}
+
+export function analyze(doc: NoticeDocument): AnalysisResult {
+  nextId = 0;
+  const lines = doc.pages.flatMap((p) => p.lines);
+  const items: ChecklistItem[] = [];
+  const warnings = [...doc.warnings];
+
+  const dateMentions = allDateMentions(lines);
+
+  // ---- form title / notice date ----
+  const formLine = lines.find((l) => /\bform\s+[a-z]*\d/i.test(l.text));
+  const formTitle = formLine ? formLine.text.trim() : null;
+  const noticeDate =
+    dateMentions.find((d) => d.kind === "notice-date") ??
+    lines
+      .filter((l) => NOTICE_DATE_LINE.test(l.text))
+      .flatMap((l) => allDateMentions([l]))[0] ??
+    null;
+
+  // ---- programs ----
+  const programs: ProgramEntry[] = [];
+  const markIdx = lines.findIndex((l) => CHECK_MARK_SENTENCE.test(l.text));
+  if (markIdx >= 0) {
+    const window = collectLines(lines, markIdx, 6);
+    const seen = new Map<string, ProgramState>();
+    const evByName = new Map<string, Evidence>();
+    for (const l of window) {
+      for (const p of findProgramsInLine(l.text)) {
+        // first definite state wins; undetermined never overwrites a real mark
+        const prev = seen.get(p.name);
+        if (!prev || (prev === "undetermined" && p.state !== "undetermined")) {
+          seen.set(p.name, p.state);
+          evByName.set(p.name, ev(l));
+        }
+      }
+    }
+    for (const [name, state] of seen) {
+      programs.push({ name, state, evidence: evByName.get(name) ?? null });
+    }
+  }
+
+  // ---- renewal action items ----
+  const renewIdx = lines.findIndex((l) => RENEW_INTRO.test(l.text));
+  const dueIdx = lines.findIndex((l) => DUE_SECTION.test(l.text));
+  const methodEnd = dueIdx > renewIdx ? dueIdx : lines.length;
+  const methodLines =
+    renewIdx >= 0 ? lines.slice(renewIdx, methodEnd) : lines.slice(0, Math.min(lines.length, 40));
+
+  if (renewIdx >= 0) {
+    items.push(item("do", "action", "This letter asks you to renew your benefits", [ev(lines[renewIdx]!)]));
+  }
+  const online = methodLines.find(
+    (l) => ONLINE_METHOD.test(l.text) && /renew|log|manage|account/i.test(l.text)
+  );
+  if (online) {
+    const extra = methodLines.filter(
+      (l) => l.page === online.page && l.lineIndex > online.lineIndex && l.lineIndex <= online.lineIndex + 2
+    );
+    items.push(
+      item("do", "action", "Renew online through the website named in the letter", [ev(online), ...extra.map(ev)],
+        "Follow the letter's own steps — Fineprint links you to the exact sentences, not to an outside site.")
+    );
+  }
+  const mailOrFax = methodLines.find(
+    (l) => MAIL_METHOD.test(l.text) || (FAX_METHOD.test(l.text) && /form|return|send/i.test(l.text))
+  );
+  if (mailOrFax) {
+    const extra = methodLines.filter(
+      (l) => l.page === mailOrFax.page && l.lineIndex > mailOrFax.lineIndex && l.lineIndex <= mailOrFax.lineIndex + 2
+    );
+    items.push(
+      item("do", "action", "Or return the paper form by mail or fax", [ev(mailOrFax), ...extra.map(ev)],
+        "The letter says the form must be signed — see the quoted lines.")
+    );
+  }
+
+  // ---- deadlines ----
+  const dueContextLines = dueIdx >= 0 ? collectLines(lines, dueIdx, 5) : null;
+  const inDue = (pg: number, li: number) =>
+    dueContextLines?.some((l) => l.page === pg && l.lineIndex === li) ?? false;
+  // deadline candidates: dates in the due section that classify as deadline or are ambiguous
+  const dueCandidates = dateMentions.filter(
+    (d) =>
+      d.iso !== null &&
+      inDue(d.evidence.page, d.evidence.lineIndex) &&
+      (d.kind === "response-deadline" || d.kind === "other")
+  );
+  const uniqueDueIsos = [...new Set(dueCandidates.map((d) => d.iso))];
+
+  if (dueContextLines) {
+    if (uniqueDueIsos.length === 1) {
+      const d = dueCandidates.find((x) => x.iso === uniqueDueIsos[0])!;
+      items.push(
+        item("dates", "deadline", `Respond by ${d.raw}`, dueContextLines.map(ev).slice(0, 3),
+          "The only date the letter's due-date wording ties to your response.")
+      );
+    } else if (uniqueDueIsos.length > 1) {
+      items.push(
+        item("dates", "deadline-conflict", "Conflicting due dates in this notice",
+          dueCandidates.map((d) => d.evidence),
+          `The letter's due-date wording contains more than one date (${dueCandidates
+            .map((d) => d.raw)
+            .join(" vs ")}). Fineprint does not pick one — confirm the real deadline by phone.`)
+      );
+    } else {
+      items.push(
+        item("dates", "deadline-unknown", "Response deadline: not stated in this notice",
+          dueContextLines.map(ev).slice(0, 3),
+          "The letter tells you to respond soon, but no due date is printed there. Missing a deadline can end benefits — confirm the date by phone before relying on it.")
+      );
+    }
+  }
+
+  if (noticeDate) {
+    items.push(
+      item("dates", "info", `Letter printed on ${noticeDate.raw}`, [noticeDate.evidence],
+        "This is the date the notice was issued — it is not a deadline.")
+    );
+  }
+
+  // other dates — surfaced so none is silently treated as a deadline
+  const seenWindow = new Set<string>();
+  for (const d of dateMentions) {
+    if (d === noticeDate) continue;
+    if (inDue(d.evidence.page, d.evidence.lineIndex) && (d.kind === "response-deadline" || d.kind === "other")) {
+      continue; // already covered by the deadline item above
+    }
+    if (d.kind === "benefit-end" && d.iso) {
+      items.push(item("dates", "deadline", `Benefits may end ${d.raw}`, [d.evidence]));
+    } else if (d.kind === "appointment") {
+      items.push(item("dates", "deadline", `Possible appointment / interview date: ${d.raw}`, [d.evidence]));
+    } else if (d.kind === "review-window") {
+      const key = `${d.raw}`;
+      if (seenWindow.has(key)) continue;
+      seenWindow.add(key);
+      const all = dateMentions.filter((x) => x.kind === "review-window" && x.raw === d.raw).map((x) => x.evidence);
+      items.push(item("dates", "info", `Processing window mentioned: "${d.raw}"`, all,
+        "A 'within N days' rule is an agency processing window, not your deadline."));
+    } else if (d.iso !== null) {
+      items.push(item("dates", "info", `Date seen in the letter: ${d.raw}`, [d.evidence],
+        "Listed so you can see it — the letter does not clearly tie this date to an action you must take."));
+    }
+  }
+
+  // ---- required / conditional documents ----
+  const needIdx = lines.findIndex((l) => NEED_ITEMS.test(l.text));
+  if (needIdx >= 0) {
+    items.push(item("do", "action", "Gather the papers the letter lists below", [ev(lines[needIdx]!)]));
+    const bullets = collectBullets(lines, needIdx + 1);
+    for (const b of bullets) {
+      if (RIGHTS.test(b.text)) break;
+      const cond = conditionOf(b.text);
+      const title = docItemTitle(b.text);
+      const evis = b.lines.slice(0, 3).map(ev);
+      if (cond) {
+        items.push(
+          item("documents", "conditional", title, evis,
+            `The letter ties this document to a condition: "${cond}". It is not automatically required.`)
+        );
+      } else {
+        items.push(item("documents", "info", title, evis));
+      }
+    }
+  }
+
+  // ---- consequences (merged into one warning item) ----
+  const consequenceLines = lines.filter((l) => CONSEQUENCE.test(l.text));
+  if (consequenceLines.length > 0) {
+    const evs: Evidence[] = [];
+    for (const l of consequenceLines.slice(0, 3)) {
+      evs.push(ev(l));
+      const nxt = lines.find((x) => x.page === l.page && x.lineIndex === l.lineIndex + 1);
+      if (nxt && evs.length < 5) evs.push(ev(nxt));
+    }
+    items.push(
+      item("rights", "warning", "What happens if you miss it", evs,
+        "Quoted word-for-word — including conditions and exceptions.")
+    );
+  }
+
+  // ---- rights ----
+  const rightsIdx = lines.findIndex((l) => RIGHTS.test(l.text));
+  if (rightsIdx >= 0) {
+    const bullets = collectBullets(lines, rightsIdx + 1);
+    const evs = bullets.slice(0, 4).flatMap((b) => b.lines.slice(0, 2).map(ev));
+    items.push(
+      item("rights", "info",
+        `Your rights — ${bullets.length} point${bullets.length === 1 ? "" : "s"} listed in the letter`,
+        evs.length ? evs : [ev(lines[rightsIdx]!)],
+        "Summaries come straight from the letter's own 'Your Rights' section; open a quote to read it in full.")
+    );
+  }
+
+  // ---- contacts ----
+  const contactSeen = new Set<string>();
+  for (const l of lines.slice(0, Math.min(lines.length, 25))) {
+    const label = /^fax\s*:/i.test(l.text) ? "Fax" : /^mail\s*:/i.test(l.text) ? "Write to" : "Call";
+    const phones = l.text.match(new RegExp(PHONE.source, "g")) ?? [];
+    for (const ph of phones) {
+      const clean = ph.trim();
+      if (clean.length < 3 || contactSeen.has(clean)) continue;
+      contactSeen.add(clean);
+      items.push(item("contacts", "info", `${label} ${clean}`, [ev(l)]));
+    }
+  }
+  const mailLine = lines.find(
+    (l) => l.lineIndex < 25 && (/\bmail\s*:/i.test(l.text) || /p\s*o\s*box/i.test(l.text))
+  );
+  if (mailLine) {
+    const extra = lines.filter(
+      (x) => x.page === mailLine.page && x.lineIndex > mailLine.lineIndex && x.lineIndex <= mailLine.lineIndex + 1
+    );
+    items.push(item("contacts", "info", "Mailing address in the letter", [ev(mailLine), ...extra.map(ev)]));
+  }
+
+  // ---- honest unknowns ----
+  if (programs.some((p) => p.state === "undetermined")) {
+    const undet = programs.filter((p) => p.state === "undetermined");
+    items.push(
+      item("not-said", "unknown", "Which benefits are being renewed is not readable",
+        undet.map((p) => p.evidence!).filter(Boolean),
+        `The letter names ${undet.map((p) => p.name).join(", ")} but its check-marks could not be read. Do not assume any program is covered — confirm with the agency.`)
+    );
+  }
+  if (markIdx < 0) {
+    items.push(
+      item("not-said", "unknown", "No program check-list found in the text we could read",
+        [],
+        "If your letter has checked boxes, open the original PDF rather than pasted text so the check-marks can be read.")
+    );
+  }
+  if (!dueContextLines) {
+    items.push(
+      item("not-said", "unknown", "No due-date section was found",
+        [],
+        "The notice did not contain recognizable 'due date' wording. That does not mean there is no deadline — confirm by phone.")
+    );
+  }
+  for (const w of warnings) {
+    items.push(item("not-said", "warning", "Unreadable content", [], w));
+  }
+
+  return { formTitle, noticeDate, programs, dates: dateMentions, items, warnings };
+}
