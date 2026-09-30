@@ -59,18 +59,19 @@ function matches(it: ChecklistItem, e: ItemExpectation): boolean {
 }
 
 async function loadInput(c: CorpusCase): Promise<NoticeDocument> {
-  if (c.input.kind === "sample") {
-    const def = SAMPLES.find((s) => s.id === c.input.id);
-    if (!def) throw new Error(`unknown sample ${(c.input as { id: string }).id}`);
+  const input = c.input;
+  if (input.kind === "sample") {
+    const def = SAMPLES.find((s) => s.id === input.id);
+    if (!def) throw new Error(`unknown sample ${input.id}`);
     const doc = extractText(readFileSync(`public/${def.file}`, "utf8"), def.label);
     if (def.tag === "synthetic") doc.warnings.push("Synthetic demonstration document — not a real notice.");
     return doc;
   }
-  if (c.input.kind === "text") {
-    return extractText(c.input.text, "case input");
+  if (input.kind === "text") {
+    return extractText(input.text, "case input");
   }
-  const data = new Uint8Array(readFileSync(c.input.path));
-  return extractPdf(data, c.input.path);
+  const data = new Uint8Array(readFileSync(input.path));
+  return extractPdf(data, input.path);
 }
 
 interface CaseResult {
