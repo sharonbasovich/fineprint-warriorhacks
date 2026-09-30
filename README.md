@@ -19,7 +19,7 @@ Benefit renewal letters bury the important parts — a due date, a checked box, 
 ## Demo
 
 - **Video walkthrough (2:06, narrated):** [docs/video/fineprint-walkthrough.mp4](docs/video/fineprint-walkthrough.mp4) — hero → the real Texas H1830-R sample (its due-date field is blank: Fineprint says *not stated*, quotes verbatim) → evidence click-through → conditional documents → synthetic conflicting-dates flag.
-- **Live demo:** served by GitHub Pages from `main` (see Actions → pages deployment for the URL).
+- **Live demo:** https://sharonbasovich.github.io/fineprint-warriorhacks/ — deployed by GitHub Pages from `main`.
 
 | | |
 |---|---|
