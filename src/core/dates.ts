@@ -12,14 +12,34 @@ export interface RawDateMatch {
   iso: string | null;
   index: number;
   relative: boolean;
+  /** matched a month+day with no year — ambiguous, never resolved silently */
+  yearless?: boolean;
 }
 
+const MONTHS_RE =
+  "January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|Sept|October|Oct|November|Nov|December|Dec";
 const NUMERIC = /\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g;
-const LONG =
-  /\b(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|Sept|October|Oct|November|Nov|December|Dec)\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/gi;
+const ISO_DATE = /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g;
+const LONG = new RegExp(
+  `\\b(${MONTHS_RE})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})\\b`,
+  "gi"
+);
+// month+day with NO year following — kept as an ambiguous match, not dropped.
+// (?<!\d) / (?!\d) guards stop "December 2018" matching as "December 20".
+const LONG_NO_YEAR = new RegExp(
+  `\\b(${MONTHS_RE})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?!\\d)(?![\\s,]*\\d{4}\\b)`,
+  "gi"
+);
 const RELATIVE = /\bwithin\s+(\d{1,3})\s+days?\b/gi;
-const DAY_MONTH_YEAR =
-  /\b(\d{1,2})(?:st|nd|rd|th)?\s+(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|Sept|October|Oct|November|Nov|December|Dec)\.?\s*,?\s*(\d{4})\b/gi;
+const DAY_MONTH_YEAR = new RegExp(
+  `\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTHS_RE})\\.?\\s*,?\\s*(\\d{4})\\b`,
+  "gi"
+);
+// day+month with NO year following
+const DAY_MONTH_NO_YEAR = new RegExp(
+  `\\b(\\d{1,2})(?:st|nd|rd|th)?(?!\\d)\\s+(${MONTHS_RE})\\.?(?![\\s,]*\\d{4}\\b)`,
+  "gi"
+);
 
 function toIso(y: number, m: number, d: number): string | null {
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
@@ -33,6 +53,14 @@ export function findDatesInText(text: string): RawDateMatch[] {
     out.push({
       raw: m[0],
       iso: toIso(Number(m[3]), Number(m[1]), Number(m[2])),
+      index: m.index ?? 0,
+      relative: false
+    });
+  }
+  for (const m of text.matchAll(ISO_DATE)) {
+    out.push({
+      raw: m[0],
+      iso: toIso(Number(m[1]), Number(m[2]), Number(m[3])),
       index: m.index ?? 0,
       relative: false
     });
@@ -55,6 +83,29 @@ export function findDatesInText(text: string): RawDateMatch[] {
       relative: false
     });
   }
+  // yearless month+day forms — surfaced as ambiguous, never silently resolved
+  const covered = (i: number) =>
+    out.some((d) => i >= d.index && i < d.index + d.raw.length);
+  for (const m of text.matchAll(LONG_NO_YEAR)) {
+    if (covered(m.index ?? 0)) continue;
+    out.push({
+      raw: m[0],
+      iso: null,
+      index: m.index ?? 0,
+      relative: false,
+      yearless: true
+    });
+  }
+  for (const m of text.matchAll(DAY_MONTH_NO_YEAR)) {
+    if (covered(m.index ?? 0)) continue;
+    out.push({
+      raw: m[0],
+      iso: null,
+      index: m.index ?? 0,
+      relative: false,
+      yearless: true
+    });
+  }
   for (const m of text.matchAll(RELATIVE)) {
     out.push({ raw: m[0], iso: null, index: m.index ?? 0, relative: true });
   }
@@ -62,30 +113,49 @@ export function findDatesInText(text: string): RawDateMatch[] {
   return out;
 }
 
-const NOTICE_DATE_LABEL = /\bdate\s*:/i;
+// an issue/print label immediately before the date, e.g. "DATE: ", "Printed ", "Mailed "
+const NOTICE_DATE_LABEL = /\b(?:date|printed|issued|mailed|postmarked)\s*:?\s*$/i;
 const DEADLINE_WORDS =
-  /\b(due|deadline|return|respond|reply|send (your|it|the)|as soon as|no later than|by)\b/i;
+  /\b(due|deadline|return|respond|reply|send (your|it|the)|as soon as|no later than|submit|by)\b/i;
 const END_WORDS = /\b(benefits?\s+(might|may|will|could)\s+end|end\s+on|end\s+date|termination|expire)/i;
 const APPT_WORDS = /\b(interview|appointment|meeting|scheduled)\b/i;
 const REVIEW_WORDS = /\b(review date|within\s+\d+\s+days)/i;
+// verbs meaning the READER must act — a "within N days" after these is a real deadline
+const REL_ACTION =
+  /\b(return|send|submit|respond|reply|turn in|mail|complete|provide|bring|file|sign|fill out|give us|renew)\b/i;
+// the AGENCY as subject — a "within N days" after these is a processing window,
+// not the reader's deadline ("we will tell you", "the office will review")
+const REL_AGENCY =
+  /\b(we|the office|the agency|your caseworker|hhsc|they)\b[^.]{0,40}\b(will|shall|must|may|can|should)\b|\bwe'?ll\b|\b(?:tell|notify|let) you\b/i;
 
-/** classify one match using ONLY the local ±45-char window around it */
+/** classify one match using ONLY the local context around it */
 export function classifyDate(m: RawDateMatch, lineText: string, line: SourceLine): DateMention {
   const ev: Evidence = { page: line.page, lineIndex: line.lineIndex, quote: line.text };
   const ctx = lineText.slice(Math.max(0, m.index - 45), m.index + m.raw.length + 45);
+  const pre = lineText.slice(Math.max(0, m.index - 60), m.index);
   let kind: DateKind = "other";
-  if (m.relative || REVIEW_WORDS.test(ctx)) {
+  if (m.relative) {
+    // "return/send/… within N days" is your deadline; "we will … within N days" is theirs
+    kind = REL_ACTION.test(pre) && !REL_AGENCY.test(pre) ? "response-deadline" : "review-window";
+  } else if (REVIEW_WORDS.test(ctx)) {
     kind = "review-window";
   } else if (APPT_WORDS.test(ctx)) {
     kind = "appointment";
   } else if (END_WORDS.test(ctx)) {
     kind = "benefit-end";
-  } else if (NOTICE_DATE_LABEL.test(lineText.slice(Math.max(0, m.index - 45), m.index))) {
+  } else if (NOTICE_DATE_LABEL.test(pre)) {
     kind = "notice-date";
-  } else if (DEADLINE_WORDS.test(ctx) && m.iso !== null) {
+  } else if (DEADLINE_WORDS.test(ctx) && (m.iso !== null || m.yearless)) {
     kind = "response-deadline";
   }
-  return { raw: m.raw, iso: m.iso, kind, evidence: ev };
+  return {
+    raw: m.raw,
+    iso: m.iso,
+    kind,
+    evidence: ev,
+    ...(m.relative ? { relative: true } : {}),
+    ...(m.yearless ? { yearless: true } : {})
+  };
 }
 
 export function allDateMentions(lines: SourceLine[]): DateMention[] {

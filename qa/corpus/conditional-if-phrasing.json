@@ -1,0 +1,19 @@
+{
+  "id": "conditional-if-phrasing",
+  "description": "Documents gated by 'if you pay rent' / 'if anyone has a job' are conditional, not unconditional requirements. Unconditional items stay plain.",
+  "input": {
+    "kind": "text",
+    "text": "GROVE COUNTY HUMAN SERVICES\nDATE: 05/01/2027\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nYour renewal is due by June 1, 2027.\nItems we need from you: Bring or send copies of the items that apply to your case.\n\u2022 Photo ID: driver's license or state ID card.\n\u2022 Rent receipts if you pay rent: your most recent rent receipt.\n\u2022 Pay stubs if anyone has a job: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      { "category": "documents", "status": "info", "titleContains": "Photo ID" },
+      { "category": "documents", "status": "conditional", "titleContains": "Rent receipts", "detailContains": "if you pay rent" },
+      { "category": "documents", "status": "conditional", "titleContains": "Pay stubs", "detailContains": "if anyone has a job" }
+    ],
+    "forbidden": [
+      { "category": "documents", "status": "info", "titleContains": "Rent receipts" },
+      { "category": "documents", "status": "info", "titleContains": "Pay stubs" }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "iso-date-format",
+  "description": "ISO 8601 date format (2027-10-15) must be parsed like any other printed date.",
+  "input": {
+    "kind": "text",
+    "text": "ELM COUNTY HUMAN SERVICES\nDATE: 2027-09-01\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] TANF\nDue dates:\nYour renewal is due by 2027-10-15.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      { "category": "dates", "status": "deadline", "titleContains": "Respond by 2027-10-15" }
+    ],
+    "forbidden": [
+      { "status": "deadline-unknown" },
+      { "status": "deadline-unclear" }
+    ]
+  }
+}

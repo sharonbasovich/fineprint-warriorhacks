@@ -13,6 +13,7 @@ const STATUS_LABEL: Record<ItemStatus, { label: string; cls: string }> = {
   action: { label: "Action", cls: "chip-action" },
   deadline: { label: "Deadline", cls: "chip-deadline" },
   "deadline-unknown": { label: "Deadline: not stated", cls: "chip-unknown" },
+  "deadline-unclear": { label: "Deadline: unclear", cls: "chip-unknown" },
   "deadline-conflict": { label: "Conflicting dates", cls: "chip-conflict" },
   conditional: { label: "Only if…", cls: "chip-cond" },
   info: { label: "Info", cls: "chip-info" },

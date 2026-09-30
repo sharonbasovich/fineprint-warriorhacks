@@ -42,6 +42,10 @@ export interface DateMention {
   /** ISO yyyy-mm-dd when the raw text parses to one unambiguous calendar date */
   iso: string | null;
   kind: DateKind;
+  /** "within N days" phrasing — never a concrete calendar date */
+  relative?: boolean;
+  /** a month+day with no year printed — ambiguous, never resolved silently */
+  yearless?: boolean;
   evidence: Evidence;
 }
 
@@ -57,6 +61,7 @@ export type ItemStatus =
   | "action"
   | "deadline"
   | "deadline-unknown"
+  | "deadline-unclear"
   | "deadline-conflict"
   | "conditional"
   | "info"

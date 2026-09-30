@@ -9,11 +9,11 @@ export interface SampleDef {
 export const SAMPLES: SampleDef[] = [
   {
     id: "official",
-    label: "Real public sample: Texas H1830-R renewal notice",
+    label: "Official sample: Texas H1830-R renewal notice (2018)",
     file: "samples/h1830r-official-sample.txt",
     tag: "official",
     blurb:
-      "The real December 2018 sample form from Texas HHSC. Its due-date field is blank — watch Fineprint refuse to invent one."
+      "The official December 2018 sample form published by Texas HHSC, marked SAMPLE. Its due-date field is blank — watch Fineprint refuse to invent one."
   },
   {
     id: "synthetic-dated",

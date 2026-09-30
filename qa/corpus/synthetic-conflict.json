@@ -1,6 +1,6 @@
 {
   "id": "synthetic-conflict",
-  "description": "Synthetic notice stating two different response deadlines (online vs paper). Must surface a conflict, never pick one.",
+  "description": "Synthetic notice tying two different dates to the same response action with no method scoping. Must surface a conflict, never pick one.",
   "input": { "kind": "sample", "id": "synthetic-conflict" },
   "expect": {
     "programs": [

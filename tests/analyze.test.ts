@@ -80,6 +80,60 @@ describe("checkbox reading", () => {
   });
 });
 
+describe("deadline honesty regressions", () => {
+  it("a 'Printed' date under due-date wording is never invented as a deadline", () => {
+    const doc = extractText(
+      "Due dates:\nSend your renewal as soon as you can.\nPrinted 10/01/2026",
+      "t"
+    );
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("10/01"))).toBe(false);
+    expect(r.items.some((i) => i.status === "deadline-unknown")).toBe(true);
+  });
+
+  it("'return within N days' is a deadline; 'office will review within N days' is a window", () => {
+    const doc = extractText(
+      "Due dates:\nReturn your renewal form within 30 days.\nThe office will review your case within 10 days.",
+      "t"
+    );
+    const mentions = allDateMentions(doc.pages[0]!.lines);
+    const by = Object.fromEntries(mentions.map((d) => [d.raw, d.kind]));
+    expect(by["within 30 days"]).toBe("response-deadline");
+    expect(by["within 10 days"]).toBe("review-window");
+  });
+
+  it("yearless 'October 15' is captured as ambiguous, not a concrete date", () => {
+    const m = findDatesInText("Return the form by October 15.");
+    expect(m[0]!.iso).toBeNull();
+    expect(m[0]!.yearless).toBe(true);
+  });
+
+  it("ISO 2027-10-15 parses like any printed date", () => {
+    expect(findDatesInText("due by 2027-10-15")[0]!.iso).toBe("2027-10-15");
+  });
+
+  it("online vs paper deadlines are separate method-scoped deadlines, not a conflict", () => {
+    const doc = extractText(
+      "Due dates:\nYour online renewal is due by 07/15/2027, but the paper form must be returned by 07/01/2027.",
+      "t"
+    );
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline-conflict")).toBe(false);
+    const titles = r.items.filter((i) => i.status === "deadline").map((i) => i.title);
+    expect(titles.some((t) => t.includes("07/15/2027"))).toBe(true);
+    expect(titles.some((t) => t.includes("07/01/2027"))).toBe(true);
+  });
+
+  it("an action deadline outside a 'Due dates' section is still found", () => {
+    const doc = extractText(
+      "It is time to renew your benefits.\nPlease return your renewal by March 3, 2027.",
+      "t"
+    );
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("March 3, 2027"))).toBe(true);
+  });
+});
+
 describe("conditional documents", () => {
   it("preserves 'only if' conditions verbatim-ish", () => {
     const doc = extractText(

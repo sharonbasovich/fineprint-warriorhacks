@@ -7,6 +7,7 @@ import { allDateMentions } from "./dates";
 import type {
   AnalysisResult,
   ChecklistItem,
+  DateMention,
   Evidence,
   ItemCategory,
   ItemStatus,
@@ -44,6 +45,8 @@ const MAIL_METHOD = /\bby mail|mail (the|this|your)|pre-paid envelope|return (th
 const FAX_METHOD = /\bfax/i;
 const PHONE = /(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\b\d-\d-\d\b|\b\d-\d{3}-\d{3}-\d{4}\b)/;
 const NOTICE_DATE_LINE = /^date\s*:/i;
+const METHOD_ONLINE = /\bonline|website|internet|log\s?in|\.gov\b|\.com\b/i;
+const METHOD_PAPER = /\bpaper|by mail|in the mail|mailed\b|envelope|by fax|fax\b/i;
 
 const KNOWN_PROGRAMS = [
   "CHIP Perinatal",
@@ -134,7 +137,12 @@ function conditionOf(text: string): string | null {
     return text.slice(start + 1).replace(/\)+$/, "").trim();
   }
   const m2 = text.match(/\b(only\s+(if|when|for)\b[^.:]*)/i);
-  return m2 ? m2[1]!.trim() : null;
+  if (m2) return m2[1]!.trim();
+  // "X if you pay rent", "proof of earnings if anyone has a job", …
+  const m3 = text.match(
+    /\bif\s+(?:you|your|anyone|any person|a person|someone|they|them|the child|children|it)\b[^.:]{0,120}/i
+  );
+  return m3 ? m3[0].trim() : null;
 }
 
 function docItemTitle(text: string): string {
@@ -171,6 +179,36 @@ function findProgramsInLine(text: string): { name: string; state: ProgramState }
     }
   }
   return out;
+}
+
+/**
+ * Does a date's own clause scope it to a response method (online vs paper)?
+ * Uses the clause containing the date (split on . , ; ! ?), not the whole line,
+ * so "online due X, paper due Y" attributes each date to its own method.
+ */
+function methodLabel(d: { raw: string; evidence: Evidence }, lines: SourceLine[]): "online" | "paper" | null {
+  const line = lines.find(
+    (l) => l.page === d.evidence.page && l.lineIndex === d.evidence.lineIndex
+  );
+  if (!line) return null;
+  const idx = line.text.indexOf(d.raw);
+  if (idx < 0) return null;
+  const before = line.text.slice(0, idx);
+  const after = line.text.slice(idx + d.raw.length);
+  const segStart =
+    Math.max(
+      ...[".", ",", ";", "?", "!"].map((c) => before.lastIndexOf(c))
+    ) + 1;
+  const afterIdxs = [".", ",", ";", "?", "!"]
+    .map((c) => after.indexOf(c))
+    .filter((i) => i >= 0);
+  const segEnd = afterIdxs.length ? Math.min(...afterIdxs) : after.length;
+  const clause = before.slice(segStart) + d.raw + after.slice(0, segEnd);
+  const on = METHOD_ONLINE.test(clause);
+  const pap = METHOD_PAPER.test(clause);
+  if (on && !pap) return "online";
+  if (pap && !on) return "paper";
+  return null;
 }
 
 export function analyze(doc: NoticeDocument): AnalysisResult {
@@ -249,40 +287,105 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   }
 
   // ---- deadlines ----
+  // Whole-letter scan: an action deadline can appear anywhere, not only inside
+  // a "Due dates" block. Only dates the wording ties to your response qualify —
+  // print/issue dates and untied dates never become deadlines.
   const dueContextLines = dueIdx >= 0 ? collectLines(lines, dueIdx, 5) : null;
   const inDue = (pg: number, li: number) =>
     dueContextLines?.some((l) => l.page === pg && l.lineIndex === li) ?? false;
-  // deadline candidates: dates in the due section that classify as deadline or are ambiguous
-  const dueCandidates = dateMentions.filter(
-    (d) =>
-      d.iso !== null &&
-      inDue(d.evidence.page, d.evidence.lineIndex) &&
-      (d.kind === "response-deadline" || d.kind === "other")
-  );
-  const uniqueDueIsos = [...new Set(dueCandidates.map((d) => d.iso))];
 
-  if (dueContextLines) {
-    if (uniqueDueIsos.length === 1) {
-      const d = dueCandidates.find((x) => x.iso === uniqueDueIsos[0])!;
-      items.push(
-        item("dates", "deadline", `Respond by ${d.raw}`, dueContextLines.map(ev).slice(0, 3),
-          "The only date the letter's due-date wording ties to your response.")
-      );
-    } else if (uniqueDueIsos.length > 1) {
+  const hardDue = dateMentions.filter(
+    (d) => d.kind === "response-deadline" && d.iso !== null && !d.yearless
+  );
+  const relDue = dateMentions.filter(
+    (d) => d.kind === "response-deadline" && d.relative === true
+  );
+  // dates the letter shows but that can't be turned into a concrete deadline:
+  // yearless ("October 15") or printed in the due section untied to an action
+  const ambigDue = dateMentions.filter(
+    (d) =>
+      (d.kind === "response-deadline" && d.yearless === true) ||
+      (d.kind === "other" && inDue(d.evidence.page, d.evidence.lineIndex))
+  );
+  const consumed = new Set<DateMention>();
+
+  const dueIsos = [...new Set(hardDue.map((d) => d.iso!))];
+  if (dueIsos.length === 1) {
+    const ds = hardDue.filter((d) => d.iso === dueIsos[0]);
+    const d = ds[0]!;
+    const method = methodLabel(d, lines);
+    items.push(
+      item("dates", "deadline",
+        `Respond by ${d.raw}${method ? ` — ${method}` : ""}`,
+        ds.map((x) => x.evidence),
+        "The only calendar date the letter ties to your response.")
+    );
+    ds.forEach((x) => consumed.add(x));
+  } else if (dueIsos.length > 1) {
+    const labels = dueIsos.map((iso) =>
+      methodLabel(hardDue.find((d) => d.iso === iso)!, lines)
+    );
+    const methodScoped =
+      labels.every((l) => l !== null) && new Set(labels).size === labels.length;
+    if (methodScoped) {
+      // separate method-scoped dates (online vs paper) are not a conflict —
+      // each applies to its own way of responding
+      for (let i = 0; i < dueIsos.length; i++) {
+        const d = hardDue.find((x) => x.iso === dueIsos[i])!;
+        const lab = labels[i] === "online" ? "Online renewal" : "Paper form";
+        items.push(
+          item("dates", "deadline", `${lab} due ${d.raw}`, [d.evidence],
+            "The letter prints a separate date for this way of responding — each date applies to its own method.")
+        );
+      }
+    } else {
       items.push(
         item("dates", "deadline-conflict", "Conflicting due dates in this notice",
-          dueCandidates.map((d) => d.evidence),
-          `The letter's due-date wording contains more than one date (${dueCandidates
+          hardDue.map((d) => d.evidence),
+          `The letter ties more than one date to your response (${hardDue
             .map((d) => d.raw)
             .join(" vs ")}). Fineprint does not pick one — confirm the real deadline by phone.`)
       );
-    } else {
-      items.push(
-        item("dates", "deadline-unknown", "Response deadline: not stated in this notice",
-          dueContextLines.map(ev).slice(0, 3),
-          "The letter tells you to respond soon, but no due date is printed there. Missing a deadline can end benefits — confirm the date by phone before relying on it.")
-      );
     }
+    hardDue.forEach((x) => consumed.add(x));
+  }
+
+  // action-worded "within N days" deadlines — real deadlines with no calendar date
+  const seenRel = new Set<string>();
+  for (const d of relDue) {
+    if (seenRel.has(d.raw)) continue;
+    seenRel.add(d.raw);
+    const all = relDue.filter((x) => x.raw === d.raw).map((x) => x.evidence);
+    items.push(
+      item("dates", "deadline", `Respond ${d.raw}`, all,
+        `The letter sets a "${d.raw}" deadline but prints no calendar date and does not say what day the count starts from — confirm it by phone.`)
+    );
+  }
+  relDue.forEach((x) => consumed.add(x));
+
+  if (
+    dueIsos.length === 0 &&
+    relDue.length === 0 &&
+    ambigDue.length > 0
+  ) {
+    const raws = ambigDue.map((d) => `"${d.raw}"`).join(", ");
+    const why = ambigDue.some((d) => d.yearless)
+      ? "is missing a year"
+      : "is not clearly tied to an action";
+    items.push(
+      item("dates", "deadline-unclear", "Response deadline: unclear in this notice",
+        ambigDue.map((d) => d.evidence),
+        `The letter shows ${raws} near its due-date wording, but it ${why}. Fineprint will not guess — confirm the real deadline by phone.`)
+    );
+    ambigDue.forEach((x) => consumed.add(x));
+  }
+
+  if (dueContextLines && dueIsos.length === 0 && relDue.length === 0 && ambigDue.length === 0) {
+    items.push(
+      item("dates", "deadline-unknown", "Response deadline: not stated in this notice",
+        dueContextLines.map(ev).slice(0, 3),
+        "The letter tells you to respond soon, but no due date is printed there. Missing a deadline can end benefits — confirm the date by phone before relying on it.")
+    );
   }
 
   if (noticeDate) {
@@ -296,9 +399,7 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   const seenWindow = new Set<string>();
   for (const d of dateMentions) {
     if (d === noticeDate) continue;
-    if (inDue(d.evidence.page, d.evidence.lineIndex) && (d.kind === "response-deadline" || d.kind === "other")) {
-      continue; // already covered by the deadline item above
-    }
+    if (consumed.has(d)) continue; // already covered by a deadline item above
     if (d.kind === "benefit-end" && d.iso) {
       items.push(item("dates", "deadline", `Benefits may end ${d.raw}`, [d.evidence]));
     } else if (d.kind === "appointment") {
@@ -403,7 +504,7 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
         "If your letter has checked boxes, open the original PDF rather than pasted text so the check-marks can be read.")
     );
   }
-  if (!dueContextLines) {
+  if (!dueContextLines && dueIsos.length === 0 && relDue.length === 0 && ambigDue.length === 0) {
     items.push(
       item("not-said", "unknown", "No due-date section was found",
         [],

@@ -1,0 +1,18 @@
+{
+  "id": "deadline-outside-due-section",
+  "description": "A letter with no 'Due dates' header still has an action deadline mid-body. The whole letter is scanned, so it must be found and the 'no due-date section' unknown must not appear.",
+  "input": {
+    "kind": "text",
+    "text": "FERN COUNTY DEPARTMENT OF HUMAN SERVICES\nDATE: 02/01/2027\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nPlease return your renewal by March 3, 2027.\nIf we do not hear from you, your benefits might end on 04/01/2027.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      { "category": "dates", "status": "deadline", "titleContains": "Respond by March 3, 2027" },
+      { "category": "dates", "status": "deadline", "titleContains": "Benefits may end 04/01/2027" }
+    ],
+    "forbidden": [
+      { "status": "unknown", "titleContains": "No due-date section" },
+      { "status": "deadline-unknown" }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "response-within-days",
+  "description": "An action-worded 'within N days' is YOUR deadline (no calendar date printed); an agency-worded 'within N days' is a processing window. They must land in different buckets.",
+  "input": {
+    "kind": "text",
+    "text": "BIRCH COUNTY HUMAN SERVICES\nDATE: 03/01/2027\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] Health Care\nDue dates:\nReturn your renewal form within 30 days.\nThe office will review your case within 10 days.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      { "category": "dates", "status": "deadline", "titleContains": "Respond within 30 days" },
+      { "category": "dates", "status": "info", "titleContains": "Processing window" }
+    ],
+    "forbidden": [
+      { "status": "deadline-unknown" },
+      { "status": "deadline", "titleContains": "within 10 days" }
+    ]
+  }
+}

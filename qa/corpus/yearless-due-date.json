@@ -1,0 +1,17 @@
+{
+  "id": "yearless-due-date",
+  "description": "A month+day with no year ('October 15') under due-date wording is a real but ambiguous deadline hint — report it as unclear, never claim 'not stated' and never resolve the year silently.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY FAMILY SERVICES\nDATE: 09/20/2027\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nReturn the form by October 15.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      { "category": "dates", "status": "deadline-unclear", "titleContains": "unclear", "detailContains": "October 15" }
+    ],
+    "forbidden": [
+      { "status": "deadline-unknown" },
+      { "status": "deadline", "titleContains": "October 15" }
+    ]
+  }
+}

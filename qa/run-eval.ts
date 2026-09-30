@@ -197,6 +197,8 @@ async function main() {
   lines.push(``);
   lines.push(`Citation integrity: every evidence quote is checked verbatim against the source lines. A quote that does not appear word-for-word in the document counts as an error — paraphrased citations are failures, not features.`);
   lines.push(``);
+  lines.push(`Scope note: this corpus is authored by the same project session that built the parser. These numbers are regression coverage — evidence the parser behaves as designed on these inputs — not independent third-party verification.`);
+  lines.push(``);
   const anyErr = results.some((r) => r.errors.length > 0);
   if (anyErr) {
     lines.push(`## Errors`);
