@@ -1,0 +1,23 @@
+{
+  "id": "doc-if-cant-get",
+  "description": "'If you cannot get one, bring a passport' is likewise a fallback, not a gate.",
+  "input": {
+    "kind": "text",
+    "text": "PINE GROVE ASSISTANCE OFFICE\nDATE: 09/01/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nReturn your form by 10/15/2026.\nItems we need from you: bring copies.\n\u2022 Birth certificate. If you cannot get one, bring a passport or school record."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Birth certificate"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "documents",
+        "status": "conditional"
+      }
+    ]
+  }
+}

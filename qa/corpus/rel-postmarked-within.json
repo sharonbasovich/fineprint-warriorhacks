@@ -1,0 +1,25 @@
+{
+  "id": "rel-postmarked-within",
+  "description": "'Your form must be postmarked within 14 days' is a relative deadline.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nYour form must be postmarked within 14 days.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond within 14 days"
+      }
+    ],
+    "forbidden": [
+      {
+        "status": "deadline-unknown"
+      },
+      {
+        "status": "deadline-unclear"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "doc-even-if-variant",
+  "description": "'even if your address did not change' is not a gate either.",
+  "input": {
+    "kind": "text",
+    "text": "PINE GROVE ASSISTANCE OFFICE\nDATE: 09/01/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nReturn your form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of address: send a utility bill even if your address did not change."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Proof of address"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "documents",
+        "status": "conditional"
+      }
+    ]
+  }
+}

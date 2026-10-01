@@ -1,0 +1,29 @@
+{
+  "id": "agency-within-window",
+  "description": "'We will send you a decision within 45 days' is the agency's window, not the reader's deadline \u2014 deadline stays 'not stated'.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nRespond as soon as you can. We will send you a decision within 45 days.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline-unknown",
+        "titleContains": "not stated"
+      },
+      {
+        "category": "dates",
+        "status": "info",
+        "titleContains": "Processing window"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "45 days"
+      }
+    ]
+  }
+}

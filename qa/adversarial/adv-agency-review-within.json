@@ -1,0 +1,29 @@
+{
+  "id": "adv-agency-review-within",
+  "description": "'We will review your case within 30 days' stays a processing window while a real deadline is also present.",
+  "input": {
+    "kind": "text",
+    "text": "LAKEFRONT SERVICES\nDATE: 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] Health Care\nDue dates:\nYour renewal is due by 10/15/2026. We will review your case within 30 days of receiving your form.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 10/15/2026"
+      },
+      {
+        "category": "dates",
+        "status": "info",
+        "titleContains": "Processing window"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "within 30 days"
+      }
+    ]
+  }
+}

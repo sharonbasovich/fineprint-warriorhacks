@@ -139,10 +139,29 @@ function conditionOf(text: string): string | null {
   const m2 = text.match(/\b(only\s+(if|when|for)\b[^.:]*)/i);
   if (m2) return m2[1]!.trim();
   // "X if you pay rent", "proof of earnings if anyone has a job", …
-  const m3 = text.match(
-    /\bif\s+(?:you|your|anyone|any person|a person|someone|they|them|the child|children|it)\b[^.:]{0,120}/i
+  // but NOT "even if …" (required regardless of the condition) and NOT
+  // fallback alternatives like "if you do not have one, bring any photo ID" —
+  // those don't gate the document, they rescue it
+  const IF_CLAUSE =
+    /\b(?:even\s+)?if\s+(?:not\b|you\b|your\b|anyone\b|any person\b|a person\b|someone\b|they\b|them\b|the child\b|children\b|it\b)[^.:]{0,120}/gi;
+  const NEGATED_FALLBACK =
+    /^if\s+(?:you|anyone|any person|a person|someone|they|them|it|the child|children)\s+(?:do\s+not|don'?t|cannot|can'?t|can\s+not|will\s+not|won'?t|have\s+no|lack)\b/i;
+  for (const m3 of text.matchAll(IF_CLAUSE)) {
+    const clause = m3[0];
+    if (/^even\s+if\b/i.test(clause)) continue;
+    if (/^if\s+not\b/i.test(clause)) continue;
+    if (NEGATED_FALLBACK.test(clause)) continue;
+    return clause.trim();
+  }
+  // "…unless you are self-employed" gates a document the same way "if" does —
+  // but "unless you do not have one" is again a fallback, not a gate
+  const m4 = text.match(
+    /\bunless\s+(?:you|your|anyone|any person|a person|someone|they|them|it|the child|children)\b[^.:]{0,120}/i
   );
-  return m3 ? m3[0].trim() : null;
+  if (m4 && !NEGATED_FALLBACK.test(m4[0].replace(/^unless/i, "if"))) {
+    return m4[0].trim();
+  }
+  return null;
 }
 
 function docItemTitle(text: string): string {

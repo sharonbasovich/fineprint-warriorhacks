@@ -1,0 +1,30 @@
+{
+  "id": "adv-yearless-past",
+  "description": "'You returned your form by March 1' is yearless AND past \u2014 surfaced nowhere as a deadline.",
+  "input": {
+    "kind": "text",
+    "text": "SUMMIT COUNTY AID OFFICE\nDATE: 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] Health Care\nDue dates:\nYou returned your form by March 1. Your renewal is due by 11/01/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 11/01/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "March 1"
+      },
+      {
+        "status": "deadline-unclear"
+      },
+      {
+        "status": "deadline-conflict"
+      }
+    ]
+  }
+}

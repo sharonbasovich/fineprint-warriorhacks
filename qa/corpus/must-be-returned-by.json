@@ -1,0 +1,25 @@
+{
+  "id": "must-be-returned-by",
+  "description": "'The paper form must be returned by 11/01/2026' is a deadline even though 'returned' is past-participle in form.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nThe paper form must be returned by 11/01/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 11/01/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "status": "deadline-unknown"
+      },
+      {
+        "status": "deadline-unclear"
+      }
+    ]
+  }
+}

@@ -20,6 +20,10 @@ jobs:
       - run: npm test
       - name: Held-out QA corpus
         run: npx tsx qa/run-eval.ts
+      - name: Browser E2E
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
       - run: npm run build
 
   deploy:

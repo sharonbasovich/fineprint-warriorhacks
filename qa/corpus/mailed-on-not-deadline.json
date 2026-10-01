@@ -1,0 +1,27 @@
+{
+  "id": "mailed-on-not-deadline",
+  "description": "'This notice was mailed on 09/25/2026' is history \u2014 surfaced as a seen date, never a deadline, never a conflict.",
+  "input": {
+    "kind": "text",
+    "text": "OAK RIDGE HUMAN SERVICES\nThis notice was mailed on 09/25/2026.\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nReturn your form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 10/15/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "status": "deadline-conflict"
+      },
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "09/25/2026"
+      }
+    ]
+  }
+}

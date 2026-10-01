@@ -1,0 +1,32 @@
+{
+  "id": "adv-appointment-and-deadline",
+  "description": "An interview date and a return deadline coexist as different item types \u2014 neither merges nor conflicts.",
+  "input": {
+    "kind": "text",
+    "text": "MARSH COUNTY BENEFITS\nDATE: 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] Health Care\nDue dates:\nReturn your form by 10/15/2026.\nYour interview is scheduled for 10/20/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 10/15/2026"
+      },
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "10/20/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "status": "deadline-conflict"
+      },
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 10/20/2026"
+      }
+    ]
+  }
+}

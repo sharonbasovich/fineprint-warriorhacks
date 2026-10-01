@@ -147,6 +147,123 @@ describe("conditional documents", () => {
   });
 });
 
+describe("adversarial semantic attribution", () => {
+  it("past-tense 'was reviewed on X' is history, not a deadline", () => {
+    const doc = extractText(
+      "Due dates:\nYour case was reviewed by your caseworker on 09/01/2026.",
+      "t"
+    );
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("09/01"))).toBe(false);
+  });
+
+  it("'Last year you returned your form by X' is history, not a deadline", () => {
+    const doc = extractText(
+      "Due dates:\nLast year you returned your form by 03/01/2025.",
+      "t"
+    );
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("03/01"))).toBe(false);
+  });
+
+  it("a past-tense clause cannot suppress a real deadline clause on the same line", () => {
+    const doc = extractText(
+      "Due dates:\nYour case was reviewed on 09/01/2026. Return your form by 10/15/2026.",
+      "t"
+    );
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("10/15/2026"))).toBe(true);
+    expect(r.items.some((i) => i.status === "deadline-conflict")).toBe(false);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("09/01"))).toBe(false);
+  });
+
+  it("'you have N days to return' is a relative deadline", () => {
+    const doc = extractText(
+      "Due dates:\nYou have 10 days from the date of this notice to return your form.",
+      "t"
+    );
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("within 10 days"))).toBe(true);
+    expect(r.items.some((i) => i.status === "deadline-unknown")).toBe(false);
+  });
+
+  it("'the office must receive your form within N days' is a relative deadline, not a window", () => {
+    const doc = extractText(
+      "Due dates:\nThe office must receive your signed form within 10 days.",
+      "t"
+    );
+    const mentions = allDateMentions(doc.pages[0]!.lines);
+    expect(mentions[0]!.kind).toBe("response-deadline");
+  });
+
+  it("'must be postmarked within N days' is a relative deadline", () => {
+    const doc = extractText("Due dates:\nYour form must be postmarked within 14 days.", "t");
+    const mentions = allDateMentions(doc.pages[0]!.lines);
+    expect(mentions[0]!.kind).toBe("response-deadline");
+  });
+
+  it("'must be returned by X' participle form is still a deadline", () => {
+    const doc = extractText("Due dates:\nThe paper form must be returned by 11/01/2026.", "t");
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("11/01/2026"))).toBe(true);
+  });
+
+  it("'Printed on X. Return your form by Y' yields the Y deadline with no conflict", () => {
+    const doc = extractText("Due dates:\nPrinted on 09/25/2026. Return your form by 10/15/2026.", "t");
+    const r = analyze(doc);
+    expect(r.items.some((i) => i.status === "deadline" && i.title.includes("10/15/2026"))).toBe(true);
+    expect(r.items.some((i) => i.status === "deadline-conflict")).toBe(false);
+    expect(r.items.some((i) => i.title.includes("printed on 09/25/2026"))).toBe(true);
+  });
+
+  it("a benefit-end clause after a deadline keeps both dates in their own kinds", () => {
+    const doc = extractText(
+      "Due dates:\nReturn your form by 10/15/2026 or your benefits will end on 12/31/2026.",
+      "t"
+    );
+    const mentions = allDateMentions(doc.pages[0]!.lines);
+    const kinds = Object.fromEntries(mentions.map((d) => [d.iso, d.kind]));
+    expect(kinds["2026-10-15"]).toBe("response-deadline");
+    expect(kinds["2026-12-31"]).toBe("benefit-end");
+  });
+
+  it("dash-format '10-15-2026' parses like the slash form", () => {
+    expect(findDatesInText("due by 10-15-2026")[0]!.iso).toBe("2026-10-15");
+  });
+});
+
+describe("document condition edge cases", () => {
+  it("'even if your income did not change' does not make a document conditional", () => {
+    const doc = extractText(
+      "Items we need from you: send copies.\n• Proof of income: send pay stubs even if your income did not change.",
+      "t"
+    );
+    const r = analyze(doc);
+    const docItem = r.items.find((i) => i.category === "documents" && i.title.includes("Proof of income"));
+    expect(docItem?.status).toBe("info");
+  });
+
+  it("'if you do not have one, bring any photo ID' is a fallback, not a condition", () => {
+    const doc = extractText(
+      "Items we need from you: bring copies.\n• Driver's license. If you do not have one, bring any photo ID.",
+      "t"
+    );
+    const r = analyze(doc);
+    const docItem = r.items.find((i) => i.category === "documents" && i.title.includes("Driver"));
+    expect(docItem?.status).toBe("info");
+  });
+
+  it("'unless you are self-employed' is a real condition", () => {
+    const doc = extractText(
+      "Items we need from you: send copies.\n• Proof of income unless you are self-employed: last 4 pay stubs.",
+      "t"
+    );
+    const r = analyze(doc);
+    const docItem = r.items.find((i) => i.category === "documents" && i.title.includes("Proof of income"));
+    expect(docItem?.status).toBe("conditional");
+  });
+});
+
 describe("citation integrity", () => {
   it("every evidence quote is verbatim from the source", () => {
     const doc = loadSample("h1830r-official-sample.txt");

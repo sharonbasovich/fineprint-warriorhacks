@@ -1,0 +1,27 @@
+{
+  "id": "hist-clause-scoped",
+  "description": "A past-tense clause on the SAME line must not suppress the real deadline clause that follows it.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nYour case was reviewed on 09/01/2026. Return your form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 10/15/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "09/01/2026"
+      },
+      {
+        "status": "deadline-conflict"
+      }
+    ]
+  }
+}

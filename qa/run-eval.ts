@@ -167,10 +167,16 @@ async function runCase(c: CorpusCase): Promise<CaseResult> {
 }
 
 async function main() {
-  const files = readdirSync("qa/corpus").filter((f) => f.endsWith(".json")).sort();
+  const CASE_DIRS = ["qa/corpus", "qa/adversarial"];
+  const files = CASE_DIRS.flatMap((dir) =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .sort()
+      .map((f) => `${dir}/${f}`)
+  );
   const results: CaseResult[] = [];
   for (const f of files) {
-    const c = JSON.parse(readFileSync(`qa/corpus/${f}`, "utf8")) as CorpusCase;
+    const c = JSON.parse(readFileSync(f, "utf8")) as CorpusCase;
     results.push(await runCase(c));
   }
 

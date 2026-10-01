@@ -1,0 +1,23 @@
+{
+  "id": "doc-even-if",
+  "description": "'even if your income did not change' does not make a required document conditional \u2014 it is required regardless.",
+  "input": {
+    "kind": "text",
+    "text": "OAK RIDGE HUMAN SERVICES\nDATE: 09/01/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nReturn your form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: send pay stubs even if your income did not change."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Proof of income"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "documents",
+        "status": "conditional"
+      }
+    ]
+  }
+}

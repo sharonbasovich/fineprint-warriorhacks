@@ -1,0 +1,32 @@
+{
+  "id": "printed-on-own-line",
+  "description": "Same pairing on separate lines \u2014 printed date stays notice-date, real date stays the single deadline.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nPrinted on 09/25/2026.\nReturn your form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "Respond by 10/15/2026"
+      },
+      {
+        "category": "dates",
+        "status": "info",
+        "titleContains": "Letter printed on 09/25/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "status": "deadline-conflict"
+      },
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "09/25/2026"
+      }
+    ]
+  }
+}

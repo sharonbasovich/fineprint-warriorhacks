@@ -1,0 +1,30 @@
+{
+  "id": "adv-even-if-and-real-if",
+  "description": "One unconditional 'even if' bullet plus one real 'if you pay rent' conditional in the same list.",
+  "input": {
+    "kind": "text",
+    "text": "BAYVIEW BENEFITS CENTER\nDATE: 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] Health Care\nDue dates:\nReturn your form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: send pay stubs even if nothing changed.\n\u2022 Rent receipts if you pay rent."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Proof of income"
+      },
+      {
+        "category": "documents",
+        "status": "conditional",
+        "titleContains": "Rent receipts",
+        "detailContains": "if you pay rent"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "documents",
+        "status": "conditional",
+        "titleContains": "Proof of income"
+      }
+    ]
+  }
+}
