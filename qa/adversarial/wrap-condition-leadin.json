@@ -1,0 +1,24 @@
+{
+  "id": "wrap-condition-leadin",
+  "description": "A conditional lead-in on the line above the dated line must be included.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nDATE 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nIf your income changed,\nsend proof by 11/01/2026.\nItems we need from you: send copies.\n\u2022 Proof of income."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "titleContains": "If your income changed",
+        "evidenceContains": "11/01/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "titleContains": "Respond"
+      }
+    ]
+  }
+}

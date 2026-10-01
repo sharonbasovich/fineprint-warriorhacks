@@ -1,0 +1,24 @@
+{
+  "id": "wrap-list-item",
+  "description": "A bullet that wraps mid-sentence keeps both halves in one excerpt.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nDATE 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\n\u2022 Return the renewal\n  form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of income."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "titleContains": "Return the renewal",
+        "evidenceContains": "10/15/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "titleContains": "Respond"
+      }
+    ]
+  }
+}

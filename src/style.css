@@ -183,6 +183,13 @@ textarea { resize: vertical; font-family: ui-monospace, monospace; font-size: 0.
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: 1.25rem;
   margin-top: 1rem;
+  align-items: start;
+}
+/* the letter stays visible while the checklist scrolls — every card's
+   evidence quote can be checked against the pinned source */
+.panes > .pane:first-child {
+  position: sticky;
+  top: 0.75rem;
 }
 .pane {
   background: var(--panel);
@@ -334,4 +341,8 @@ footer {
   .input-grid { grid-template-columns: 1fr; }
   .panes { grid-template-columns: 1fr; }
   .source-view { max-height: 45vh; }
+  /* long verbatim excerpt titles get the full row, not a squeezed column */
+  .cl-item summary { flex-wrap: wrap; row-gap: 0.25rem; }
+  .cl-title { flex-basis: 100%; order: 3; }
+  .cl-item summary::after { order: 2; }
 }

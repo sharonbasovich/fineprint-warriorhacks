@@ -176,3 +176,79 @@ more phrase patterns: Fineprint no longer emits any deadline conclusion at all.
 - vitest 79/79 · eval 54+6 cases / 179 coverage checks = 100%, 0 abstention
   violations, 0 assertion leaks, 0 citation errors · Playwright E2E 13/13 ·
   lint/typecheck/build clean.
+
+# Round 6 — excerpt-boundary structural fix + UI/media corrections
+
+Reviewed base: `d6af887`. Independent review: close to GO — zero made-up date conclusions in 20 fresh notices; one structural P1 (line-clipped excerpts lost preceding negation) plus small UI/copy defects.
+
+## P1: sentence-aware excerpt boundaries (`src/core/analyze.ts`)
+
+Excerpt groups were built from raw lines, so a soft-wrapped sentence like
+`You do not need to return` + `the form by 10/20/2026.` quoted only the dated
+line — presenting a negation as an instruction.
+
+Structural fix, no phrase patterns: every timing-mention line now expands to
+its **sentence span** before grouping —
+
+- Backward: joins preceding lines while the previous line lacks sentence-terminal
+  punctuation, does not end a `label:` field, is not a section header or a short
+  all-capitalized letterhead line, and the current line is not itself a
+  bullet/field-label/header. A negation or conditional lead-in on the line above
+  therefore stays attached — for OCR-style ALL-CAPS wraps too (caps headers are
+  limited to ≤5 words so a 6+-word wrapped lead-in still joins).
+- Forward: joins following continuation lines until terminal punctuation,
+  stopping at bullets, field labels, headers, and record lines.
+- Spans that overlap or touch merge into one context block; a wrapped bullet or
+  a sentence split across `--- page break ---` stays a single excerpt.
+- Each excerpt card is labeled "Verbatim excerpt — meaning depends on the
+  letter's full context" and the section lead tells the reader excerpts show
+  the lines around each mention rather than claiming complete clause capture.
+
+## Other confirmed fixes
+
+- **Provenance separated from content:** bundled-sample notes (`SOURCE:`,
+  "Official public sample retrieved from…", "Text extracted locally by
+  Fineprint…", "This is a SAMPLE form…") are now annotation lines — visible in
+  the source pane but never eligible as excerpt evidence. Pinned by
+  `provenance-not-evidence` (forbids quoting them).
+- **Document card contact-line bleed:** `collectBullets` now stops at
+  `Call:`/`Fax:`/`Mail:`/`Phone:`/`TTY:`/`Email:`/`Visit:`/`Online:`/`Text:`
+  contact-field lines, so a trailing "Call: 1-800…" is not folded into the last
+  document item. Pinned by `doc-contact-line-not-doc`.
+- **Stale copy:** `unknown` chip relabeled "Check letter" (was "Not stated");
+  sample header now reads "date on form: 01/23/2019" (was "issued…");
+  conflict-card detail no longer says "confirm the real deadline" — it says to
+  check the full letter and the agency contact in it.
+- **Sticky source pane:** `.panes > .pane:first-child` is now
+  `position: sticky` — the letter stays visible while the checklist scrolls,
+  so every card's evidence quote can be checked against it (also fixes the
+  recording problem where the source pane scrolled out of view).
+- **Mobile excerpt layout:** under 860px, checklist summaries wrap — the chip
+  and arrow stay on the first row, long verbatim titles take the full row
+  instead of a squeezed column.
+
+## Video
+
+Re-recorded from scratch again (Playwright `record_video`, real 25 fps
+frames). The Housing segment now shows the complete conditional card AND its
+flashed source line side-by-side while the sentence is spoken (verified at
+frame level). Narration s8 regenerated — "labeled not stated" removed from the
+audio, not just subtitles. Output: `docs/video/fineprint-walkthrough.mp4`
+(~2:04). Screenshots recaptured on this build.
+
+## Regression coverage added (`qa/adversarial/`)
+
+`wrap-negation-two-line`, `wrap-negation-colon`, `wrap-condition-leadin`,
+`wrap-uppercase-ocr`, `wrap-list-item`, `wrap-punctuation-stop` (a real
+sentence boundary is respected — the question line must NOT join),
+`wrap-multi-date-context`, `wrap-across-page-break`, `doc-contact-line-not-doc`,
+`provenance-not-evidence`. All assert quote-contract excerpts — no automatic
+date judgments anywhere.
+
+## Checks (this head)
+
+- `npm run lint` clean · `npm run typecheck` clean
+- `npx vitest run` — 89/89
+- `npm run eval` — 69 regression cases · 201/201 coverage · 0 abstention
+  violations · 0 authoritative-phrase leaks · 0 citation errors
+- `npx playwright test` — 13/13 browser E2E

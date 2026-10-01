@@ -1,6 +1,6 @@
 # Fineprint QA report
 
-Regression corpus: 59 cases · generated 2026-10-01T09:23:59Z
+Regression corpus: 69 cases · generated 2026-10-01T10:38:43Z
 
 | Case | Coverage | Abstention violations | Program misses | Citation errors |
 |---|---|---|---|---|
@@ -58,13 +58,23 @@ Regression corpus: 59 cases · generated 2026-10-01T09:23:59Z
 | adv-will-have-days | 2/2 | 0 | 0 | 0 |
 | adv-yearless-past | 3/3 | 0 | 0 | 0 |
 | agency-window-quoted | 2/2 | 0 | 0 | 0 |
+| doc-contact-line-not-doc | 3/3 | 0 | 0 | 0 |
 | mixed-send-return-one-line | 3/3 | 0 | 0 | 0 |
 | negated-do-not-return | 2/2 | 0 | 0 | 0 |
 | no-invented-method-steps | 4/4 | 0 | 0 | 0 |
+| provenance-not-evidence | 2/2 | 0 | 0 | 0 |
 | two-instructions-stay-visible | 4/4 | 0 | 0 | 0 |
 | unsupported-utility-bill | 3/3 | 0 | 0 | 0 |
+| wrap-across-page-break | 2/2 | 0 | 0 | 0 |
+| wrap-condition-leadin | 2/2 | 0 | 0 | 0 |
+| wrap-list-item | 2/2 | 0 | 0 | 0 |
+| wrap-multi-date-context | 2/2 | 0 | 0 | 0 |
+| wrap-negation-colon | 2/2 | 0 | 0 | 0 |
+| wrap-negation-two-line | 2/2 | 0 | 0 | 0 |
+| wrap-punctuation-stop | 3/3 | 0 | 0 | 0 |
+| wrap-uppercase-ocr | 2/2 | 0 | 0 | 0 |
 
-**Aggregate** — coverage (recall on expected findings): 179/179 = 100.0% · abstention violations: 0 · abstention precision: 100.0% · citation errors: 0
+**Aggregate** — coverage (recall on expected findings): 201/201 = 100.0% · abstention violations: 0 · abstention precision: 100.0% · citation errors: 0
 
 Citation integrity: every evidence quote is checked verbatim against the source lines. A quote that does not appear word-for-word in the document counts as an error — paraphrased citations are failures, not features.
 

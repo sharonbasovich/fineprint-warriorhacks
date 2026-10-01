@@ -101,8 +101,9 @@ function collectBullets(
       cur = { text: stripBullet(line.text), lines: [line] };
     } else if (cur) {
       if (
-        looksLikeSectionHeader(line.text) &&
-        !/^(and|or|the|a|an|that|which|to|for|if|you|it|in|of|must)\b/i.test(line.text)
+        CONTACT_LABEL.test(line.text.trim()) ||
+        (looksLikeSectionHeader(line.text) &&
+          !/^(and|or|the|a|an|that|which|to|for|if|you|it|in|of|must)\b/i.test(line.text))
       ) {
         break;
       }
@@ -233,6 +234,33 @@ const TIMING_WORDS =
 
 const TIMING_HEADER = /^\s*(?:due\s*dates?|important\s*dates?|deadlines?|key\s*dates?)\s*:?\s*$/i;
 
+// Provenance lines we add to bundled samples (source links, "SAMPLE" notes,
+// extraction disclaimers) are metadata, not letter content — never quote them.
+const ANNOTATION =
+  /^source:|official public sample|text extracted locally|this is a sample form|synthetic demo document|invented for fineprint|not a real government notice|all names, dates|markers transcribed|document-comprehension demonstration|pasted below/i;
+// Record-style lines that start a new entry rather than continuing a
+// sentence: "Call: 1-800…", "DATE: 01/23/2019", "CASE NO 123".
+const FIELD_LABEL = /^[A-Za-z][A-Za-z0-9 ./#()'-]{0,20}:/;
+// Short lines where every word is capitalized or all-caps ("CEDAR COUNTY
+// BENEFITS", "Questions And Answers") are headers/letterhead — not wrapped
+// sentence fragments. Limited to 5 words so a 6+-word all-caps OCR wrap
+// lead-in like "YOU DO NOT NEED TO RETURN" still joins its date line.
+const SHORT_CAPS_HEADER =
+  /^([A-Z][a-z]+|[A-Z]{2,})(\s+([A-Z][a-z]+|[A-Z]{2,}))*$/;
+// Contact-field lines — a trailing "Call: 1-800…" line after a document
+// bullet is a new record, not part of the document requirement.
+const CONTACT_LABEL = /^(call|fax|mail|phone|tty|email|visit|online|text)\s*[:#]/i;
+const RECORD_LINE = /^[A-Z][A-Z .]*\s*[#:]?\s*[\d(]/;
+const TERMINAL = /[.!?]["'”)]*\s*$/;
+
+/** True when the line begins a new record/sentence rather than continuing
+ *  the previous one (bullet, field label, section header). */
+function startsNewRecord(text: string): boolean {
+  const t = text.trim();
+  if (t.length === 0) return true;
+  return isBullet(t) || FIELD_LABEL.test(t) || RECORD_LINE.test(t) || looksLikeSectionHeader(t);
+}
+
 export function analyze(doc: NoticeDocument): AnalysisResult {
   nextId = 0;
   const lines = doc.pages.flatMap((p) => p.lines);
@@ -357,39 +385,86 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   // Every clause that contains a date or timing instruction is quoted
   // verbatim, in the order it appears, with a jump to the source line. The
   // reader decides which — if any — apply to them.
-  const timingLines = new Set<SourceLine>();
+  //
+  // Excerpts are sentence-aware: a date line is expanded to the whole
+  // sentence it sits in (soft line wraps are joined, and a preceding
+  // conditional/negative lead-in like "You do not need to return" stays
+  // attached), because clipping a wrapped line can invert its meaning.
+  const timingIdx = new Set<number>();
   const dateLines = new Set(
     dateMentions.map((d) => `${d.evidence.page}:${d.evidence.lineIndex}`)
   );
-  for (const l of lines) {
-    if (TIMING_HEADER.test(l.text)) continue; // section header alone is not timing
+  lines.forEach((l, i) => {
+    if (ANNOTATION.test(l.text)) return; // our notes are not letter evidence
+    if (TIMING_HEADER.test(l.text)) return; // section header alone is not timing
     if (TIMING_WORDS.test(l.text) || dateLines.has(`${l.page}:${l.lineIndex}`)) {
-      timingLines.add(l);
+      timingIdx.add(i);
     }
-  }
+  });
   // the few lines under a "Due dates:"-style header are timing context even
   // when they carry no date word — include the whole block
   if (dueIdx >= 0) {
-    for (const l of collectLines(lines, dueIdx + 1, 4)) {
-      if (looksLikeSectionHeader(l.text)) break;
-      timingLines.add(l);
+    for (let k = dueIdx + 1; k < Math.min(lines.length, dueIdx + 5); k++) {
+      const l = lines[k]!;
+      if (looksLikeSectionHeader(l.text) || ANNOTATION.test(l.text)) break;
+      timingIdx.add(k);
     }
   }
 
-  const orderedTiming = [...timingLines].sort(
-    (a, b) => a.page - b.page || a.lineIndex - b.lineIndex
-  );
-
-  // group consecutive qualifying lines into one context-block excerpt
-  const excerptGroups: SourceLine[][] = [];
-  for (const l of orderedTiming) {
-    const last = excerptGroups[excerptGroups.length - 1];
-    const prev = last?.[last.length - 1];
-    if (last && prev && prev.page === l.page && l.lineIndex - prev.lineIndex === 1) {
-      last.push(l);
-    } else {
-      excerptGroups.push([l]);
+  /** Expand line idx to the full sentence/paragraph span it belongs to. */
+  function sentenceSpan(idx: number): [number, number] {
+    let s = idx;
+    while (s > 0) {
+      const prev = lines[s - 1]!;
+      const cur = lines[s]!;
+      if (ANNOTATION.test(prev.text) || ANNOTATION.test(cur.text)) break;
+      // cur is only a sentence-start on a strong signal — ALL-CAPS wrapped
+      // lines (OCR output) must still join their lead-in
+      if (isBullet(cur.text) || FIELD_LABEL.test(cur.text) || looksLikeSectionHeader(cur.text))
+        break;
+      const pt = prev.text.trim();
+      if (
+        TERMINAL.test(pt) ||
+        pt.endsWith(":") ||
+        TIMING_HEADER.test(pt) ||
+        FIELD_LABEL.test(pt) ||
+        (pt.split(/\s+/).length <= 5 && SHORT_CAPS_HEADER.test(pt))
+      )
+        break;
+      s--;
     }
+    let e = idx;
+    while (e < lines.length - 1) {
+      const last = lines[e]!;
+      const next = lines[e + 1]!;
+      const lt = last.text.trim();
+      if (
+        TERMINAL.test(lt) ||
+        lt.endsWith(":") ||
+        FIELD_LABEL.test(lt) ||
+        RECORD_LINE.test(lt)
+      )
+        break;
+      if (ANNOTATION.test(next.text) || startsNewRecord(next.text)) break;
+      e++;
+    }
+    return [s, e];
+  }
+
+  // merge overlapping or directly-adjacent spans into context-block groups
+  const excerptGroups: SourceLine[][] = [];
+  {
+    let cur: [number, number] | null = null;
+    for (const i of [...timingIdx].sort((a, b) => a - b)) {
+      const [s, e] = sentenceSpan(i);
+      if (cur && s <= cur[1] + 1) {
+        cur[1] = Math.max(cur[1], e);
+      } else {
+        if (cur) excerptGroups.push(lines.slice(cur[0], cur[1] + 1));
+        cur = [s, e];
+      }
+    }
+    if (cur) excerptGroups.push(lines.slice(cur[0], cur[1] + 1));
   }
 
   if (excerptGroups.length === 0) {
@@ -402,23 +477,24 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
     items.push(
       item("dates", "info", "Dates and timing mentioned — quoted, not interpreted",
         excerptGroups.flatMap((g) => g.slice(0, 1).map(ev)).slice(0, 6),
-        "Every excerpt below is copied word-for-word from the letter, in the order it appears. Check which, if any, apply to you in the full letter.")
+        "Every excerpt below is copied word-for-word from the letter, in the order it appears. Excerpts show the lines around each timing mention — read them inside the full letter. Check which, if any, apply to you.")
     );
     for (const g of excerptGroups) {
       const text = g.map((l) => l.text.trim()).join(" ");
       const title = text.length > 110 ? `${text.slice(0, 107)}…` : text;
-      items.push(item("dates", "excerpt", title, g.map(ev)));
+      items.push(item("dates", "excerpt", title, g.map(ev),
+        "Verbatim excerpt — meaning depends on the letter's full context."));
     }
     const timingDateCount = dateMentions.filter((d) =>
-      timingLines.has(
-        lines.find((l) => l.page === d.evidence.page && l.lineIndex === d.evidence.lineIndex)!
+      timingIdx.has(
+        lines.findIndex((l) => l.page === d.evidence.page && l.lineIndex === d.evidence.lineIndex)
       )
     ).length;
     if (excerptGroups.length > 1 || timingDateCount > 1) {
       items.push(
         item("dates", "warning", "More than one timing instruction appears in this letter",
           excerptGroups.flatMap((g) => g.slice(0, 1).map(ev)),
-          "Check for conflicting instructions — the letter mentions several dates or timing phrases. Fineprint does not pick one; confirm the real deadline with the agency.")
+          "Check for conflicting instructions — the letter mentions several dates or timing phrases. Fineprint does not pick one; check the full letter and the agency contact listed in it.")
       );
     }
   }

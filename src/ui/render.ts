@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<ItemStatus, { label: string; cls: string }> = {
   conditional: { label: "Only if…", cls: "chip-cond" },
   info: { label: "Info", cls: "chip-info" },
   warning: { label: "Watch out", cls: "chip-warning" },
-  unknown: { label: "Not stated", cls: "chip-unknown" }
+  unknown: { label: "Check letter", cls: "chip-unknown" }
 };
 
 const PROGRAM_LABEL = { checked: "marked", unchecked: "listed, not marked", undetermined: "not readable" } as const;
@@ -36,7 +36,7 @@ function renderHeader(doc: NoticeDocument, result: AnalysisResult): void {
     : `Unsupported document — “${doc.sourceName}”`;
   const parts: string[] = [];
   if (result.formTitle) parts.push(result.formTitle);
-  if (result.noticeDate) parts.push(`issued ${result.noticeDate.raw}`);
+  if (result.noticeDate) parts.push(`date on form: ${result.noticeDate.raw}`);
   sub.textContent = parts.join(" · ");
 
   const chips = document.querySelector<HTMLElement>("#program-chips")!;

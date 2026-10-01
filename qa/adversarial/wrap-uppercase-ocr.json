@@ -1,0 +1,24 @@
+{
+  "id": "wrap-uppercase-ocr",
+  "description": "ALL-CAPS OCR-style wrap: negation on the line above must survive.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nDATE 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nYOU DO NOT NEED TO RETURN\nTHE FORM BY 10/20/2026.\nItems we need from you: send copies.\n\u2022 Proof of income."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "titleContains": "YOU DO NOT NEED TO RETURN",
+        "evidenceContains": "10/20/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "titleContains": "Respond"
+      }
+    ]
+  }
+}

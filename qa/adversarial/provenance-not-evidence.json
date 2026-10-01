@@ -1,0 +1,32 @@
+{
+  "id": "provenance-not-evidence",
+  "description": "Bundled-sample provenance notes (SOURCE:, SAMPLE disclaimer) must never be quoted as letter evidence.",
+  "input": {
+    "kind": "text",
+    "text": "SOURCE: Texas HHSC, Form H1830-R (December 2018).\nThis is a SAMPLE form \u2014 its due-date field is blank.\nCEDAR COUNTY BENEFITS\nDATE 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nReturn your form by 10/15/2026.\nItems we need from you: send copies.\n\u2022 Proof of income."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "10/15/2026"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "titleContains": "Respond"
+      },
+      {
+        "evidenceContains": "SOURCE:"
+      },
+      {
+        "evidenceContains": "SAMPLE form"
+      },
+      {
+        "evidenceContains": "document-comprehension"
+      }
+    ]
+  }
+}
