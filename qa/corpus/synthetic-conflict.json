@@ -1,19 +1,79 @@
 {
   "id": "synthetic-conflict",
   "description": "Synthetic notice tying two different dates to the same response action with no method scoping. Must surface a conflict, never pick one.",
-  "input": { "kind": "sample", "id": "synthetic-conflict" },
+  "input": {
+    "kind": "sample",
+    "id": "synthetic-conflict"
+  },
   "expect": {
     "programs": [
-      { "name": "SNAP", "state": "checked" },
-      { "name": "Health Care", "state": "checked" },
-      { "name": "TANF", "state": "unchecked" }
+      {
+        "name": "SNAP",
+        "state": "checked"
+      },
+      {
+        "name": "Health Care",
+        "state": "checked"
+      },
+      {
+        "name": "TANF",
+        "state": "unchecked"
+      }
     ],
     "items": [
-      { "category": "dates", "status": "deadline-conflict", "titleContains": "Conflicting", "detailContains": "07/15/2027" }
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "07/15/2027"
+      },
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "07/01/2027"
+      },
+      {
+        "category": "dates",
+        "status": "warning",
+        "titleContains": "timing instruction"
+      }
     ],
     "forbidden": [
-      { "status": "deadline", "titleContains": "Respond by" },
-      { "status": "deadline", "titleContains": "Letter printed on 06/10" }
+      {
+        "status": "deadline",
+        "titleContains": "Respond by"
+      },
+      {
+        "status": "deadline",
+        "titleContains": "Letter printed on 06/10"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
+      }
     ]
   }
 }

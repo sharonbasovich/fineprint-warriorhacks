@@ -14,9 +14,9 @@
       <p class="eyebrow">Fineprint</p>
       <h1>A confusing letter just arrived.<br /><span class="accent">One missed date could matter.</span></h1>
       <p class="hook">
-        Fineprint reads a benefits-renewal notice and turns it into a plain-language checklist —
-        every action, deadline and required paper linked to the exact sentence it came from.
-        And when the letter doesn't say something, Fineprint says that too.
+        Fineprint reads a benefits-renewal notice and organizes what it actually says —
+        every action, timing clause and requested paper linked to the exact sentence it came from,
+        quoted word-for-word so you can check it yourself.
       </p>
       <div class="hero-actions">
         <button id="try-demo" class="primary">Try it on an official sample notice</button>
@@ -57,7 +57,7 @@
       <section id="results" class="results" hidden aria-label="Analysis results">
         <div class="results-head">
           <div>
-            <h2 id="doc-title">Checklist</h2>
+            <h2 id="doc-title">What the letter says</h2>
             <p id="doc-sub" class="muted"></p>
           </div>
           <div id="program-chips" class="program-chips" aria-label="Programs named in this notice"></div>
@@ -70,7 +70,7 @@
             <div id="source-view" class="source-view" tabindex="0"></div>
           </div>
           <div class="pane checklist-pane">
-            <h3>Your checklist</h3>
+            <h3>What the letter says</h3>
             <div id="checklist"></div>
           </div>
         </div>
@@ -80,16 +80,18 @@
         <h2>How it works</h2>
         <ol>
           <li><strong>Reads the letter in your browser.</strong> Text extraction happens locally — nothing is uploaded, and no AI service is called.</li>
-          <li><strong>Finds what the letter asks.</strong> Renewal methods, due-date wording, the checked programs, and each required or conditional document — conditions and exceptions are quoted word-for-word.</li>
+          <li><strong>Finds what the letter asks.</strong> Renewal methods, the checked programs, and each requested or conditional document — conditions and exceptions are quoted word-for-word.</li>
+          <li><strong>Quotes timing, never decides it.</strong> Every clause that mentions a date or timing instruction is shown verbatim, in the order it appears — no picked deadline, no hidden second date. Check which, if any, apply to you in the full letter.</li>
           <li><strong>Links every answer to its sentence.</strong> Each checklist item shows the exact quote and page it came from.</li>
-          <li><strong>Quotes before it answers.</strong> A date only becomes a "Respond by" card when the letter's own words give an unambiguous present-tense deadline instruction; anything historical, mixed or unclear is shown as a quoted candidate instead.</li>
-          <li><strong>Admits what isn't there.</strong> Each finding is marked as stated, unclear, or not said — a blank due date stays "not stated" and an unchecked program is not assumed covered.</li>
+          <li><strong>Admits what it can't see.</strong> If the tool finds no timing wording, it says so and points you back to the letter — it never asserts a deadline exists or doesn't.</li>
         </ol>
         <p class="muted">
-          <strong>Scope:</strong> Fineprint is an evidence reader for benefits-renewal notices in the
-          style of Texas form H1830-R. Text that doesn't look like one gets an honest unsupported
-          notice and no checklist. It is a document-comprehension demo, not legal aid and not a
-          government service — it makes no eligibility, medical, or legal decisions. Synthetic
+          <strong>Scope:</strong> Fineprint is an evidence reader intended for benefits-renewal
+          notices in the style of Texas form H1830-R — an organizer of quoted excerpts, never a
+          statement of what you are required to do. Text without renewal-notice vocabulary gets an
+          honest unsupported notice and no checklist. It is a document-comprehension demo, not
+          legal aid and not a government service — it makes no eligibility, medical, or legal
+          decisions. Synthetic
           samples are clearly labeled; the bundled official sample is the blank 2018 Texas HHSC
           form linked in the source manifest.
         </p>

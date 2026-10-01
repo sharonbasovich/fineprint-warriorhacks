@@ -18,12 +18,14 @@ async function loadOfficialSample(page: import("@playwright/test").Page) {
 }
 
 test.describe("core flow", () => {
-  test("bundled official sample renders the checklist and refuses the blank due date", async ({
+  test("bundled official sample renders the checklist and quotes timing instead of inventing a deadline", async ({
     page
   }) => {
     await loadOfficialSample(page);
-    await expect(page.locator("#checklist")).toContainText("not stated");
-    await expect(page.locator("#doc-title")).toContainText("Checklist");
+    await expect(page.locator("#checklist")).toContainText("Dates and timing mentioned");
+    await expect(page.locator("#checklist")).toContainText("as soon as you can");
+    await expect(page.locator("#checklist")).not.toContainText(/respond by/i);
+    await expect(page.locator("#doc-title")).toContainText("What the letter says");
     await expect(page.locator("#source-view")).toContainText("Form H1830-R");
   });
 
@@ -45,6 +47,7 @@ test.describe("core flow", () => {
     await page.click("#analyze-paste");
     await expect(page.locator("#results")).toBeVisible();
     await expect(page.locator("#checklist")).toContainText("11/01/2026");
+    await expect(page.locator("#checklist")).not.toContainText(/respond by/i);
     await expect(page.locator("#program-chips")).toContainText("SNAP");
   });
 
@@ -72,7 +75,7 @@ test.describe("core flow", () => {
     await expect(page.locator("#doc-title")).toContainText("H1830");
     await page.selectOption("#sample-select", "synthetic-conflict");
     await expect(page.locator("#doc-title")).toContainText("different due dates");
-    await expect(page.locator("#checklist")).toContainText("Conflicting");
+    await expect(page.locator("#checklist")).toContainText(/conflicting instructions/i);
   });
 
   test("a synthetic sample carries its disclosure banner", async ({ page }) => {
@@ -130,7 +133,7 @@ test.describe("mobile viewport", () => {
 
   test("results stack with no horizontal overflow at phone width", async ({ page }) => {
     await loadOfficialSample(page);
-    await expect(page.locator("#checklist")).toContainText("not stated");
+    await expect(page.locator("#checklist")).toContainText("timing");
     const { scrollW, clientW } = await page.evaluate(() => ({
       scrollW: document.documentElement.scrollWidth,
       clientW: document.documentElement.clientWidth
@@ -147,7 +150,7 @@ test.describe("zoom", () => {
     await page.evaluate(() => {
       document.documentElement.style.zoom = "2";
     });
-    await expect(page.locator("#checklist")).toContainText("not stated");
+    await expect(page.locator("#checklist")).toContainText("timing");
     const item = page.locator("details.cl-item").first();
     await item.locator("summary").click();
     await item.locator(".ev-quote").first().click();

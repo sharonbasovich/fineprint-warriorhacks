@@ -1,0 +1,30 @@
+{
+  "id": "unsupported-utility-bill",
+  "description": "A utility bill is not a renewal notice \u2014 the scope gate must not treat generic 'amount due / due date' text as supported.",
+  "input": {
+    "kind": "text",
+    "text": "ACME ELECTRICITY\nAccount 554433\nStatement date 09/01/2026\nAmount due: $120.43\nDue date: 10/01/2026\nPay online at acme.example.com or mail payment to P O BOX 1, AUSTIN TX 78701"
+  },
+  "expect": {
+    "supported": false,
+    "items": [
+      {
+        "category": "not-said",
+        "status": "warning",
+        "titleContains": "not look like"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "titleContains": "Respond"
+      },
+      {
+        "category": "documents"
+      },
+      {
+        "category": "do"
+      }
+    ]
+  }
+}

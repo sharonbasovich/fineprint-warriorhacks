@@ -7,12 +7,53 @@
   },
   "expect": {
     "items": [
-      { "category": "dates", "status": "deadline", "titleContains": "Respond within 30 days" },
-      { "category": "dates", "status": "info", "titleContains": "Processing window" }
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "within 30 days"
+      },
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "within 10 days"
+      }
     ],
     "forbidden": [
-      { "status": "deadline-unknown" },
-      { "status": "deadline", "titleContains": "within 10 days" }
+      {
+        "status": "deadline-unknown"
+      },
+      {
+        "status": "deadline",
+        "titleContains": "within 10 days"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
+      }
     ]
   }
 }

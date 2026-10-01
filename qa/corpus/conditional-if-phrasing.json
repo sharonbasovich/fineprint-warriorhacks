@@ -7,13 +7,63 @@
   },
   "expect": {
     "items": [
-      { "category": "documents", "status": "info", "titleContains": "Photo ID" },
-      { "category": "documents", "status": "conditional", "titleContains": "Rent receipts", "detailContains": "if you pay rent" },
-      { "category": "documents", "status": "conditional", "titleContains": "Pay stubs", "detailContains": "if anyone has a job" }
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Photo ID"
+      },
+      {
+        "category": "documents",
+        "status": "conditional",
+        "titleContains": "Rent receipts",
+        "detailContains": "if you pay rent"
+      },
+      {
+        "category": "documents",
+        "status": "conditional",
+        "titleContains": "Pay stubs",
+        "detailContains": "if anyone has a job"
+      }
     ],
     "forbidden": [
-      { "category": "documents", "status": "info", "titleContains": "Rent receipts" },
-      { "category": "documents", "status": "info", "titleContains": "Pay stubs" }
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Rent receipts"
+      },
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Pay stubs"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
+      }
     ]
   }
 }

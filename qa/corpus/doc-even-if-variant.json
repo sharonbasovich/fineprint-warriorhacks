@@ -17,6 +17,34 @@
       {
         "category": "documents",
         "status": "conditional"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
       }
     ]
   }

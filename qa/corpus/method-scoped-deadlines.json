@@ -1,18 +1,58 @@
 {
   "id": "method-scoped-deadlines",
-  "description": "Online and paper deadlines scoped to different methods are NOT a contradiction — emit two separate labeled deadlines, no conflict flag.",
+  "description": "Online and paper deadlines scoped to different methods are NOT a contradiction \u2014 emit two separate labeled deadlines, no conflict flag.",
   "input": {
     "kind": "text",
     "text": "RIVERSIDE COUNTY FAMILY SERVICES\nDATE: 06/10/2027\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nYou can renew benefits online or by returning the form that came with this letter.\nDue dates:\nSend your renewal as soon as you can. Your online renewal is due by 07/15/2027, but the paper form must be returned by 07/01/2027.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
   },
   "expect": {
     "items": [
-      { "category": "dates", "status": "deadline", "titleContains": "Online", "detailContains": "method" },
-      { "category": "dates", "status": "deadline", "titleContains": "Paper", "detailContains": "method" }
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "07/15/2027"
+      },
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "07/01/2027"
+      }
     ],
     "forbidden": [
-      { "status": "deadline-conflict" },
-      { "status": "deadline-unknown" }
+      {
+        "status": "deadline-conflict"
+      },
+      {
+        "status": "deadline-unknown"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
+      }
     ]
   }
 }

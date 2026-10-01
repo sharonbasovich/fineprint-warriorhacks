@@ -7,7 +7,6 @@ import { allDateMentions } from "./dates";
 import type {
   AnalysisResult,
   ChecklistItem,
-  DateMention,
   Evidence,
   ItemCategory,
   ItemStatus,
@@ -45,8 +44,6 @@ const MAIL_METHOD = /\bby mail|mail (the|this|your)|pre-paid envelope|return (th
 const FAX_METHOD = /\bfax/i;
 const PHONE = /(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\b\d-\d-\d\b|\b\d-\d{3}-\d{3}-\d{4}\b)/;
 const NOTICE_DATE_LINE = /^date\s*:/i;
-const METHOD_ONLINE = /\bonline|website|internet|log\s?in|\.gov\b|\.com\b/i;
-const METHOD_PAPER = /\bpaper|by mail|in the mail|mailed\b|envelope|by fax|fax\b/i;
 
 const KNOWN_PROGRAMS = [
   "CHIP Perinatal",
@@ -227,34 +224,14 @@ function findProgramsInLine(text: string): { name: string; state: ProgramState }
 }
 
 /**
- * Does a date's own clause scope it to a response method (online vs paper)?
- * Uses the clause containing the date (split on . , ; ! ?), not the whole line,
- * so "online due X, paper due Y" attributes each date to its own method.
+ * Words that make a line a timing excerpt: a date anywhere, or an explicit
+ * timing/instruction word. The excerpt index quotes these clauses verbatim —
+ * it never decides which one is "the" deadline.
  */
-function methodLabel(d: { raw: string; evidence: Evidence }, lines: SourceLine[]): "online" | "paper" | null {
-  const line = lines.find(
-    (l) => l.page === d.evidence.page && l.lineIndex === d.evidence.lineIndex
-  );
-  if (!line) return null;
-  const idx = line.text.indexOf(d.raw);
-  if (idx < 0) return null;
-  const before = line.text.slice(0, idx);
-  const after = line.text.slice(idx + d.raw.length);
-  const segStart =
-    Math.max(
-      ...[".", ",", ";", "?", "!"].map((c) => before.lastIndexOf(c))
-    ) + 1;
-  const afterIdxs = [".", ",", ";", "?", "!"]
-    .map((c) => after.indexOf(c))
-    .filter((i) => i >= 0);
-  const segEnd = afterIdxs.length ? Math.min(...afterIdxs) : after.length;
-  const clause = before.slice(segStart) + d.raw + after.slice(0, segEnd);
-  const on = METHOD_ONLINE.test(clause);
-  const pap = METHOD_PAPER.test(clause);
-  if (on && !pap) return "online";
-  if (pap && !on) return "paper";
-  return null;
-}
+const TIMING_WORDS =
+  /\b(?:due|deadline|postmark\w*|within\s+\d+\s+days?|\d+\s+(?:calendar\s+|business\s+)?days?\b|as\s+soon\s+as|in\s+time\b|hear\s+from\s+you|appointment|interview|expir\w*|respond\s+by|reply\s+by|return\s+\w+\s+by|no\s+later\s+than|on\s+or\s+before|ends?|begin|start|close)\b/i;
+
+const TIMING_HEADER = /^\s*(?:due\s*dates?|important\s*dates?|deadlines?|key\s*dates?)\s*:?\s*$/i;
 
 export function analyze(doc: NoticeDocument): AnalysisResult {
   nextId = 0;
@@ -263,16 +240,15 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   const warnings = [...doc.warnings];
   const allText = lines.map((l) => l.text).join(" ");
 
-  // scope gate — Fineprint reads benefits renewal notices (H1830-R-style) or
-  // notice-shaped letters (renewal / benefits / due-date / check-mark /
-  // items-we-need structure). Anything else gets an honest unsupported view,
-  // not a confident checklist.
-  const supported =
-    RENEW_INTRO.test(allText) ||
-    NEED_ITEMS.test(allText) ||
-    DUE_SECTION.test(allText) ||
-    CHECK_MARK_SENTENCE.test(allText) ||
-    /\b(renew|renewal|benefit|coverage|assistance|eligib|SNAP|TANF|Medicaid)\b/i.test(allText);
+  // scope gate — Fineprint reads benefits renewal notices (H1830-R-style).
+  // The gate requires renewal/benefits vocabulary, not just notice-shaped
+  // structure, so an unrelated letter (a utility bill with a "due date", an
+  // office memo) does not produce a renewal checklist. Anything else gets an
+  // honest unsupported view: the text is shown as-is, and the reader is told
+  // to check the full letter for timing instructions.
+  const RENEWAL_VOCAB =
+    /\b(renew\w*|renewal|benefit\w*|assistance|coverage|eligib\w*|SNAP|TANF|Medicaid|CHIP|WIC|SSI\b|HHSC|caseworker|case\s*(?:no\.?|number|worker))\b/i;
+  const supported = RENEWAL_VOCAB.test(allText);
   if (!supported) {
     warnings.unshift(
       "Unsupported document: this text does not look like a benefits renewal notice — no checklist generated."
@@ -339,9 +315,16 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   if (renewIdx >= 0) {
     items.push(item("do", "action", "This letter asks you to renew your benefits", [ev(lines[renewIdx]!)]));
   }
-  const online = methodLines.find(
-    (l) => ONLINE_METHOD.test(l.text) && /renew|log|manage|account/i.test(l.text)
-  );
+  // method steps only appear inside a section a renewal intro opened, and
+  // only on lines whose own words name renewing/form-work — a matched line
+  // can never promote unrelated text (a bill's "pay online", "mail payment")
+  // into a renewal step.
+  const online =
+    renewIdx >= 0
+      ? methodLines.find(
+          (l) => ONLINE_METHOD.test(l.text) && /renew|log|manage|account/i.test(l.text)
+        )
+      : undefined;
   if (online) {
     const extra = methodLines.filter(
       (l) => l.page === online.page && l.lineIndex > online.lineIndex && l.lineIndex <= online.lineIndex + 2
@@ -351,9 +334,14 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
         "Follow the letter's own steps — Fineprint links you to the exact sentences, not to an outside site.")
     );
   }
-  const mailOrFax = methodLines.find(
-    (l) => MAIL_METHOD.test(l.text) || (FAX_METHOD.test(l.text) && /form|return|send/i.test(l.text))
-  );
+  const mailOrFax =
+    renewIdx >= 0
+      ? methodLines.find(
+          (l) =>
+            /form|renew/i.test(l.text) &&
+            (MAIL_METHOD.test(l.text) || (FAX_METHOD.test(l.text) && /form|return|send/i.test(l.text)))
+        )
+      : undefined;
   if (mailOrFax) {
     const extra = methodLines.filter(
       (l) => l.page === mailOrFax.page && l.lineIndex > mailOrFax.lineIndex && l.lineIndex <= mailOrFax.lineIndex + 2
@@ -364,138 +352,74 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
     );
   }
 
-  // ---- deadlines ----
-  // Whole-letter scan: an action deadline can appear anywhere, not only inside
-  // a "Due dates" block. Only dates the wording ties to your response qualify —
-  // print/issue dates and untied dates never become deadlines.
-  const dueContextLines = dueIdx >= 0 ? collectLines(lines, dueIdx, 5) : null;
-  const inDue = (pg: number, li: number) =>
-    dueContextLines?.some((l) => l.page === pg && l.lineIndex === li) ?? false;
-
-  const hardDue = dateMentions.filter(
-    (d) => d.kind === "response-deadline" && d.iso !== null && !d.yearless
+  // ---- dates & timing mentioned — a quote-first evidence index ----
+  // Product contract: Fineprint NEVER decides which date is your deadline.
+  // Every clause that contains a date or timing instruction is quoted
+  // verbatim, in the order it appears, with a jump to the source line. The
+  // reader decides which — if any — apply to them.
+  const timingLines = new Set<SourceLine>();
+  const dateLines = new Set(
+    dateMentions.map((d) => `${d.evidence.page}:${d.evidence.lineIndex}`)
   );
-  const relDue = dateMentions.filter(
-    (d) => d.kind === "response-deadline" && d.relative === true
-  );
-  // dates the letter shows but that can't be turned into a concrete deadline:
-  // yearless ("October 15") or printed in the due section untied to an action
-  const ambigDue = dateMentions.filter(
-    (d) =>
-      d.kind === "possible-deadline" ||
-      (d.kind === "response-deadline" && d.yearless === true) ||
-      (d.kind === "other" && !d.historical && inDue(d.evidence.page, d.evidence.lineIndex))
-  );
-  const consumed = new Set<DateMention>();
-
-  const dueIsos = [...new Set(hardDue.map((d) => d.iso!))];
-  if (dueIsos.length === 1) {
-    const ds = hardDue.filter((d) => d.iso === dueIsos[0]);
-    const d = ds[0]!;
-    const method = methodLabel(d, lines);
-    items.push(
-      item("dates", "deadline",
-        `Respond by ${d.raw}${method ? ` — ${method}` : ""}`,
-        ds.map((x) => x.evidence),
-        "The only calendar date the letter ties to your response.")
-    );
-    ds.forEach((x) => consumed.add(x));
-  } else if (dueIsos.length > 1) {
-    const labels = dueIsos.map((iso) =>
-      methodLabel(hardDue.find((d) => d.iso === iso)!, lines)
-    );
-    const methodScoped =
-      labels.every((l) => l !== null) && new Set(labels).size === labels.length;
-    if (methodScoped) {
-      // separate method-scoped dates (online vs paper) are not a conflict —
-      // each applies to its own way of responding
-      for (let i = 0; i < dueIsos.length; i++) {
-        const d = hardDue.find((x) => x.iso === dueIsos[i])!;
-        const lab = labels[i] === "online" ? "Online renewal" : "Paper form";
-        items.push(
-          item("dates", "deadline", `${lab} due ${d.raw}`, [d.evidence],
-            "The letter prints a separate date for this way of responding — each date applies to its own method.")
-        );
-      }
-    } else {
-      items.push(
-        item("dates", "deadline-conflict", "Conflicting due dates in this notice",
-          hardDue.map((d) => d.evidence),
-          `The letter ties more than one date to your response (${hardDue
-            .map((d) => d.raw)
-            .join(" vs ")}). Fineprint does not pick one — confirm the real deadline by phone.`)
-      );
+  for (const l of lines) {
+    if (TIMING_HEADER.test(l.text)) continue; // section header alone is not timing
+    if (TIMING_WORDS.test(l.text) || dateLines.has(`${l.page}:${l.lineIndex}`)) {
+      timingLines.add(l);
     }
-    hardDue.forEach((x) => consumed.add(x));
+  }
+  // the few lines under a "Due dates:"-style header are timing context even
+  // when they carry no date word — include the whole block
+  if (dueIdx >= 0) {
+    for (const l of collectLines(lines, dueIdx + 1, 4)) {
+      if (looksLikeSectionHeader(l.text)) break;
+      timingLines.add(l);
+    }
   }
 
-  // action-worded "within N days" deadlines — real deadlines with no calendar date
-  const seenRel = new Set<string>();
-  for (const d of relDue) {
-    if (seenRel.has(d.raw)) continue;
-    seenRel.add(d.raw);
-    const all = relDue.filter((x) => x.raw === d.raw).map((x) => x.evidence);
+  const orderedTiming = [...timingLines].sort(
+    (a, b) => a.page - b.page || a.lineIndex - b.lineIndex
+  );
+
+  // group consecutive qualifying lines into one context-block excerpt
+  const excerptGroups: SourceLine[][] = [];
+  for (const l of orderedTiming) {
+    const last = excerptGroups[excerptGroups.length - 1];
+    const prev = last?.[last.length - 1];
+    if (last && prev && prev.page === l.page && l.lineIndex - prev.lineIndex === 1) {
+      last.push(l);
+    } else {
+      excerptGroups.push([l]);
+    }
+  }
+
+  if (excerptGroups.length === 0) {
     items.push(
-      item("dates", "deadline", `Respond ${d.raw}`, all,
-        `The letter sets a "${d.raw}" deadline but prints no calendar date and does not say what day the count starts from — confirm it by phone.`)
+      item("dates", "unknown", "No timing excerpt found by this tool — check the full letter",
+        [],
+        "This tool only surfaces dates and timing words it can see; it may miss unusual wording. Do not assume there is no deadline — check the full letter.")
     );
-  }
-  relDue.forEach((x) => consumed.add(x));
-
-  if (
-    dueIsos.length === 0 &&
-    relDue.length === 0 &&
-    ambigDue.length > 0
-  ) {
-    const raws = ambigDue.map((d) => `"${d.raw}"`).join(", ");
-    const why = ambigDue.some((d) => d.yearless)
-      ? "at least one of them is missing a year"
-      : "the wording around them is not an unambiguous present-tense deadline instruction";
+  } else {
     items.push(
-      item("dates", "deadline-unclear", "Response deadline: unclear in this notice",
-        ambigDue.map((d) => d.evidence),
-        `The letter prints ${raws} where a response deadline might live, but ${why}. Each quoted sentence is shown verbatim — read it and confirm the real deadline by phone.`)
+      item("dates", "info", "Dates and timing mentioned — quoted, not interpreted",
+        excerptGroups.flatMap((g) => g.slice(0, 1).map(ev)).slice(0, 6),
+        "Every excerpt below is copied word-for-word from the letter, in the order it appears. Check which, if any, apply to you in the full letter.")
     );
-    ambigDue.forEach((x) => consumed.add(x));
-  }
-
-  if (dueContextLines && dueIsos.length === 0 && relDue.length === 0 && ambigDue.length === 0) {
-    items.push(
-      item("dates", "deadline-unknown", "Response deadline: not stated in this notice",
-        dueContextLines.map(ev).slice(0, 3),
-        "The letter tells you to respond soon, but no due date is printed there. Missing a deadline can end benefits — confirm the date by phone before relying on it.")
-    );
-  }
-
-  if (noticeDate) {
-    items.push(
-      item("dates", "info", `Letter printed on ${noticeDate.raw}`, [noticeDate.evidence],
-        "This is the date the notice was issued — it is not a deadline.")
-    );
-  }
-
-  // other dates — surfaced so none is silently treated as a deadline
-  const seenWindow = new Set<string>();
-  for (const d of dateMentions) {
-    if (d === noticeDate) continue;
-    if (consumed.has(d)) continue; // already covered by a deadline item above
-    if (d.kind === "benefit-end" && d.iso) {
-      items.push(item("dates", "deadline", `Benefits may end ${d.raw}`, [d.evidence]));
-    } else if (d.kind === "appointment") {
-      items.push(item("dates", "deadline", `Possible appointment / interview date: ${d.raw}`, [d.evidence]));
-    } else if (d.kind === "review-window") {
-      const key = `${d.raw}`;
-      if (seenWindow.has(key)) continue;
-      seenWindow.add(key);
-      const all = dateMentions.filter((x) => x.kind === "review-window" && x.raw === d.raw).map((x) => x.evidence);
-      items.push(item("dates", "info", `Processing window mentioned: "${d.raw}"`, all,
-        "A 'within N days' rule is an agency processing window, not your deadline."));
-    } else if (d.iso !== null && d.historical) {
-      items.push(item("dates", "info", `Past date mentioned in the letter: ${d.raw}`, [d.evidence],
-        "The letter ties this date to something already done — it is history, not a current deadline. Read the quoted sentence yourself."));
-    } else if (d.iso !== null) {
-      items.push(item("dates", "info", `Date seen in the letter: ${d.raw}`, [d.evidence],
-        "Listed so you can see it — the letter does not clearly tie this date to an action you must take."));
+    for (const g of excerptGroups) {
+      const text = g.map((l) => l.text.trim()).join(" ");
+      const title = text.length > 110 ? `${text.slice(0, 107)}…` : text;
+      items.push(item("dates", "excerpt", title, g.map(ev)));
+    }
+    const timingDateCount = dateMentions.filter((d) =>
+      timingLines.has(
+        lines.find((l) => l.page === d.evidence.page && l.lineIndex === d.evidence.lineIndex)!
+      )
+    ).length;
+    if (excerptGroups.length > 1 || timingDateCount > 1) {
+      items.push(
+        item("dates", "warning", "More than one timing instruction appears in this letter",
+          excerptGroups.flatMap((g) => g.slice(0, 1).map(ev)),
+          "Check for conflicting instructions — the letter mentions several dates or timing phrases. Fineprint does not pick one; confirm the real deadline with the agency.")
+      );
     }
   }
 
@@ -589,13 +513,6 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
       item("not-said", "unknown", "No program check-list found in the text we could read",
         [],
         "If your letter has checked boxes, open the original PDF rather than pasted text so the check-marks can be read.")
-    );
-  }
-  if (!dueContextLines && dueIsos.length === 0 && relDue.length === 0 && ambigDue.length === 0) {
-    items.push(
-      item("not-said", "unknown", "No due-date section was found",
-        [],
-        "The notice did not contain recognizable 'due date' wording. That does not mean there is no deadline — confirm by phone.")
     );
   }
   for (const w of warnings) {

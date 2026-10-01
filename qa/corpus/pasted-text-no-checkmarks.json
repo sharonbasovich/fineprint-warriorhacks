@@ -3,20 +3,67 @@
   "description": "Pasted text where program names appear WITHOUT checkbox markers. States must be 'undetermined' and an explicit not-readable item must be emitted; nothing may be inferred as covered.",
   "input": {
     "kind": "text",
-    "text": "HILLVIEW DEPARTMENT OF HUMAN SERVICES\nDATE: 05/11/2027\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\nSNAP   TANF   Health Care\nDue dates:\nReturn your renewal form by June 5, 2027.\nItems we need from you: send copies.\n• Proof of income: last 4 pay stubs."
+    "text": "HILLVIEW DEPARTMENT OF HUMAN SERVICES\nDATE: 05/11/2027\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\nSNAP   TANF   Health Care\nDue dates:\nReturn your renewal form by June 5, 2027.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
   },
   "expect": {
     "programs": [
-      { "name": "SNAP", "state": "undetermined" },
-      { "name": "TANF", "state": "undetermined" },
-      { "name": "Health Care", "state": "undetermined" }
+      {
+        "name": "SNAP",
+        "state": "undetermined"
+      },
+      {
+        "name": "TANF",
+        "state": "undetermined"
+      },
+      {
+        "name": "Health Care",
+        "state": "undetermined"
+      }
     ],
     "items": [
-      { "category": "not-said", "status": "unknown", "titleContains": "not readable" },
-      { "category": "dates", "status": "deadline", "titleContains": "Respond by June 5, 2027" }
+      {
+        "category": "not-said",
+        "status": "unknown",
+        "titleContains": "not readable"
+      },
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "June 5, 2027"
+      }
     ],
     "forbidden": [
-      { "status": "deadline-unknown" }
+      {
+        "status": "deadline-unknown"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
+      }
     ]
   }
 }

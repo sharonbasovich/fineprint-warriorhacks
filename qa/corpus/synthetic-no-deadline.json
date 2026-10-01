@@ -1,19 +1,69 @@
 {
   "id": "synthetic-no-deadline",
   "description": "Synthetic notice where no program is checked and no due date is printed. Must abstain on both.",
-  "input": { "kind": "sample", "id": "synthetic-blank" },
+  "input": {
+    "kind": "sample",
+    "id": "synthetic-blank"
+  },
   "expect": {
     "programs": [
-      { "name": "SNAP", "state": "unchecked" },
-      { "name": "TANF", "state": "unchecked" },
-      { "name": "Health Care", "state": "unchecked" }
+      {
+        "name": "SNAP",
+        "state": "unchecked"
+      },
+      {
+        "name": "TANF",
+        "state": "unchecked"
+      },
+      {
+        "name": "Health Care",
+        "state": "unchecked"
+      }
     ],
     "items": [
-      { "category": "dates", "status": "deadline-unknown", "titleContains": "not stated" }
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "as soon as you can"
+      }
     ],
     "forbidden": [
-      { "status": "deadline", "titleContains": "Respond by" },
-      { "status": "deadline", "titleContains": "08/20" }
+      {
+        "status": "deadline",
+        "titleContains": "Respond by"
+      },
+      {
+        "status": "deadline",
+        "titleContains": "08/20"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
+      }
     ]
   }
 }

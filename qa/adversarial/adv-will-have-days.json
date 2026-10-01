@@ -9,8 +9,8 @@
     "items": [
       {
         "category": "dates",
-        "status": "deadline",
-        "titleContains": "Respond within 60 days"
+        "status": "excerpt",
+        "evidenceContains": "60 days"
       }
     ],
     "forbidden": [
@@ -19,6 +19,34 @@
       },
       {
         "status": "deadline-unclear"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
       }
     ]
   }

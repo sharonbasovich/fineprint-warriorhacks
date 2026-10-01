@@ -1,0 +1,23 @@
+{
+  "id": "agency-window-quoted",
+  "description": "An agency-side promise (\"We will mail you a decision within 14 days after we get your form.\") is a quoted excerpt, never \"Respond within\".",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nDATE 09/20/2026\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nWe will mail you a decision within 14 days after we get your form.\nItems we need from you: send copies.\n\u2022 Proof of income."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "excerpt",
+        "evidenceContains": "within 14 days"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "titleContains": "Respond"
+      }
+    ]
+  }
+}

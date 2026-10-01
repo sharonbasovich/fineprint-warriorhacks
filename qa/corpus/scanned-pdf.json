@@ -1,15 +1,54 @@
 {
   "id": "scanned-pdf",
   "description": "Blank/image-only PDF (no text layer). Must produce an explicit unsupported-document warning instead of pretending to read it.",
-  "input": { "kind": "pdf", "path": "qa/fixtures/scanned-blank.pdf" },
+  "input": {
+    "kind": "pdf",
+    "path": "qa/fixtures/scanned-blank.pdf"
+  },
   "expect": {
     "docWarningsContains": "scanned",
     "items": [
-      { "category": "not-said", "status": "warning", "titleContains": "Unreadable" }
+      {
+        "category": "not-said",
+        "status": "warning",
+        "titleContains": "Unreadable"
+      }
     ],
     "forbidden": [
-      { "status": "deadline" },
-      { "category": "do" }
+      {
+        "status": "deadline"
+      },
+      {
+        "category": "do"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
+      }
     ]
   }
 }

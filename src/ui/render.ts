@@ -2,7 +2,7 @@ import type { AnalysisResult, ChecklistItem, ItemCategory, ItemStatus, NoticeDoc
 
 const CATEGORY_META: Record<ItemCategory, { heading: string; order: number }> = {
   do: { heading: "Do this", order: 0 },
-  dates: { heading: "Dates & deadlines", order: 1 },
+  dates: { heading: "Dates & timing mentioned", order: 1 },
   documents: { heading: "Papers the letter may ask for", order: 2 },
   rights: { heading: "Good to know", order: 3 },
   contacts: { heading: "Who to call or write", order: 4 },
@@ -11,10 +11,7 @@ const CATEGORY_META: Record<ItemCategory, { heading: string; order: number }> = 
 
 const STATUS_LABEL: Record<ItemStatus, { label: string; cls: string }> = {
   action: { label: "Action", cls: "chip-action" },
-  deadline: { label: "Deadline", cls: "chip-deadline" },
-  "deadline-unknown": { label: "Deadline: not stated", cls: "chip-unknown" },
-  "deadline-unclear": { label: "Deadline: unclear", cls: "chip-unknown" },
-  "deadline-conflict": { label: "Conflicting dates", cls: "chip-conflict" },
+  excerpt: { label: "Quoted timing", cls: "chip-info" },
   conditional: { label: "Only if…", cls: "chip-cond" },
   info: { label: "Info", cls: "chip-info" },
   warning: { label: "Watch out", cls: "chip-warning" },
@@ -34,7 +31,9 @@ export function renderResult(doc: NoticeDocument, result: AnalysisResult): void 
 function renderHeader(doc: NoticeDocument, result: AnalysisResult): void {
   const title = document.querySelector<HTMLHeadingElement>("#doc-title")!;
   const sub = document.querySelector<HTMLElement>("#doc-sub")!;
-  title.textContent = `Checklist for “${doc.sourceName}”`;
+  title.textContent = result.supported
+    ? `What the letter says — “${doc.sourceName}”`
+    : `Unsupported document — “${doc.sourceName}”`;
   const parts: string[] = [];
   if (result.formTitle) parts.push(result.formTitle);
   if (result.noticeDate) parts.push(`issued ${result.noticeDate.raw}`);

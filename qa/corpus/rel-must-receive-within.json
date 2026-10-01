@@ -9,8 +9,8 @@
     "items": [
       {
         "category": "dates",
-        "status": "deadline",
-        "titleContains": "Respond within 10 days"
+        "status": "excerpt",
+        "evidenceContains": "within 10 days"
       }
     ],
     "forbidden": [
@@ -23,6 +23,34 @@
       {
         "category": "dates",
         "status": "info",
+        "titleContains": "Processing window"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
         "titleContains": "Processing window"
       }
     ]

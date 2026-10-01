@@ -9,12 +9,8 @@
     "items": [
       {
         "category": "dates",
-        "status": "info",
-        "titleContains": "Past date"
-      },
-      {
-        "category": "dates",
-        "status": "deadline-unknown"
+        "status": "excerpt",
+        "evidenceContains": "09/01/2026"
       }
     ],
     "forbidden": [
@@ -27,6 +23,34 @@
         "category": "dates",
         "status": "deadline",
         "titleContains": "09/01/2026"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond by"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Respond within"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Deadline:"
+      },
+      {
+        "category": "dates",
+        "titleContains": "not stated in this notice"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Letter printed"
+      },
+      {
+        "category": "dates",
+        "titleContains": "Processing window"
       }
     ]
   }

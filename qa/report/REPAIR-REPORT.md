@@ -99,3 +99,80 @@ now **narrowed to an evidence reader for Texas H1830-R-style renewal notices**.
 - vitest 30/30 · eval 53 cases / 106 coverage checks = 100%, 0 abstention
   violations, 0 citation errors · Playwright E2E 13/13 · lint/typecheck/build.
 - 7 new corpus cases pin every round-4 finding.
+
+---
+
+# Round 5 — product-contract correction (deadline conclusions removed)
+
+Base for re-review: `2faf76f`. This round changes the **product contract**, not
+more phrase patterns: Fineprint no longer emits any deadline conclusion at all.
+
+## Changed spec (explicit, not silent)
+
+- **Removed:** every authoritative date output — `Respond by`, `Respond
+  within`, "only response date", "not stated in this notice" as a deadline
+  verdict, `deadline`, `deadline-unknown`, `deadline-unclear`,
+  `deadline-conflict` statuses, "Letter printed on…", "Past date mentioned",
+  "Processing window", "Benefits may end", "Date seen" items. The
+  `deadline*` statuses no longer exist in `ItemStatus` (compile-time
+  guarantee no code path can emit them).
+- **New dates section:** "Dates & timing mentioned" — a quote-first evidence
+  index. Every line/clause containing a date mention or timing instruction is
+  shown **verbatim, in source order, with a jump to the exact line**. Adjacent
+  timing clauses are grouped into one context-block excerpt so negation and
+  conditions can't be clipped away.
+- A leading info card says the section is quoted, not interpreted: "Check
+  which, if any, apply to you in the full letter."
+- More than one timing clause/date → a generic warning: "More than one
+  timing instruction appears in this letter — check for conflicting
+  instructions." No winner is picked; nothing is hidden.
+- Zero candidates → "No timing excerpt found by this tool — check the full
+  letter" (never "no deadline exists").
+- **Scope gate:** requires renewal/benefits *vocabulary* (renew\*, benefit\*,
+  assistance, coverage, SNAP/TANF/Medicaid/HHSC/caseworker/case no.), not just
+  notice-shaped structure — a utility bill with a "Due date" line no longer
+  gets a checklist. Scope is stated as an intended-use limit.
+- **Action steps hardening (review addendum):** renewal-method steps (online /
+  mail-or-fax) now require the renewal-intro section *and* a line whose own
+  words name renewing/form-work — a matched line can never promote "pay
+  online"/"mail payment" from an unrelated doc into a renewal step. The
+  unsupported view's header is "Unsupported document — <name>" and the pane is
+  "What the letter says" (was "Your checklist").
+
+## Round-5 review failures → now structurally impossible
+
+| Reported failure (build `2faf76f`) | Why it cannot recur |
+|---|---|
+| "You do not need to return anything by 10/20/2026" → Respond by | No Respond-by output exists; the negated clause is quoted whole (`negated-do-not-return`) |
+| "We will mail you a decision within 14 days" → Respond within | No Respond-within output exists; agency window quoted verbatim (`agency-window-quoted`) |
+| "sent on 09/20… return it by 10/20" → real deadline labeled history | No history/current judgment exists; both dates quoted in one excerpt (`mixed-send-return-one-line`) |
+| "Return by 10/15. The form is due 10/30." → picked one, hid conflict | Both clauses stay visible + conflict-check reminder (`two-instructions-stay-visible`) |
+| ACME electricity bill passed scope gate | Gate now needs renewal vocabulary; bill → unsupported view (`unsupported-utility-bill`) |
+| Bill received invented "return the paper form" step | Method steps require the renewal-intro section + renew/form wording in the line itself (`no-invented-method-steps`) |
+
+## Structural guarantees (not just cases)
+
+- `tests/analyze.test.ts` — `FORBIDDEN_ASSERTIONS` regex (Respond by/within,
+  "Deadline:", "not stated in this notice", "Conflicting due dates", "Past
+  date", "Letter printed", "Processing window", "only response date") asserted
+  absent **for every text-input case in both corpora** plus unit-level checks.
+- `qa/run-eval.ts` — every case adds an `AUTHORITATIVE_PHRASES` leak check to
+  coverage; a leak counts as a violation.
+- `ItemStatus` no longer contains deadline statuses — emitting one is a
+  compile error.
+
+## History preserved
+
+- Prior rounds' findings and fixes are kept above (rounds 3 and 4 tables).
+- The independent reviewer's 30-case fresh run on the old build scored
+  27/30 "no misleading output" — that was a result on the *previous* build's
+  contract, not a general accuracy claim; the disclosed cases are now
+  regression cases here.
+- Corpus remains builder-authored regression coverage, visible during tuning —
+  not held-out or independent evidence.
+
+## Checks (this round)
+
+- vitest 79/79 · eval 54+6 cases / 179 coverage checks = 100%, 0 abstention
+  violations, 0 assertion leaks, 0 citation errors · Playwright E2E 13/13 ·
+  lint/typecheck/build clean.

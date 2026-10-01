@@ -1,31 +1,32 @@
 # Fineprint
 
-**A confusing letter arrived. One missed date could matter. Fineprint shows you exactly what it asks — and admits what it doesn't say.**
+**A confusing letter arrived. One missed date could matter. Fineprint shows you exactly what it says — quoted, never interpreted.**
 
-Fineprint turns a benefits-renewal notice into a plain-language action checklist where **every answer is linked to the exact sentence and page it came from**. Built for **WarriorHacks 2.0 (Hackathon track)**.
+Fineprint turns a benefits-renewal notice into an organized evidence index where **every entry is linked to the exact sentence and page it came from**. Built for **WarriorHacks 2.0 (Hackathon track)**.
 
 ## Why
 
-Benefit renewal letters bury the important parts — a due date, a checked box, a conditional document — in dense bureaucratic text. Miss it, and coverage can lapse for procedural reasons alone. Fineprint doesn't decide anything for you. It makes the letter's asks visible and *honest*: if the notice doesn't print a deadline, Fineprint says "not stated" instead of inventing one.
+Benefit renewal letters bury the important parts — a due date, a checked box, a conditional document — in dense bureaucratic text. Miss it, and coverage can lapse for procedural reasons alone. Fineprint doesn't decide anything for you — it is an evidence organizer, not a verdict: it quotes the letter's own words and lets you check them.
 
 ## What it does
 
-- **Scoped on purpose.** Fineprint is an *evidence reader* for benefits-renewal notices in the style of Texas form H1830-R. A "Respond by" card appears only when the letter's own words give an unambiguous present-tense deadline instruction; anything historical, mixed, or merely deadline-flavored is shown as a verbatim quote with an "unclear"/"not stated" label instead. Text that isn't notice-shaped at all gets an honest "unsupported" view — not a confident checklist.
+- **Scoped on purpose.** Fineprint is an *evidence reader* intended for benefits-renewal notices in the style of Texas form H1830-R — a stated intended-use limit, not a classifier. Text without renewal-notice vocabulary gets an honest "unsupported" view — not a confident checklist.
+- **Dates are quoted, never decided.** The "Dates & timing mentioned" section is a quote-first index: every clause that mentions a date or timing instruction is shown verbatim, in the order it appears. There is no "Respond by" card — no date is selected, assigned, or judged past/current. When several timing clauses appear, a generic reminder says to check for conflicting instructions; when none are found, it says "No timing excerpt found by this tool — check the full letter" rather than asserting no deadline exists.
 - Reads a renewal notice **entirely in your browser** — text or PDF, nothing is uploaded, no AI service is called.
-- Extracts: renewal methods, **the response deadline** (or a visible "not stated" / "unclear" / "conflicting dates" card — findings are labeled stated, unclear, or not said), which benefit programs are actually **check-marked**, required vs. *conditional* documents, contact info, and consequence wording.
+- Extracts: renewal methods (each step only when an exact supporting quote exists), which benefit programs are actually **check-marked**, requested vs. *conditional* documents (conditions quoted verbatim), contact info, and consequence wording.
 - Every checklist item carries a **clickable evidence quote** that jumps to the exact line in the source pane.
-- Distinguishes date types: notice date ≠ response deadline ≠ benefit end date ≠ appointment ≠ "within N days" processing windows.
 - Scanned/image-only PDFs get an explicit "can't read this" warning — no OCR guessing, no silent failure.
 
 ## Demo
 
-- **Video walkthrough (~2:28, narrated):** [docs/video/fineprint-walkthrough.mp4](docs/video/fineprint-walkthrough.mp4) — hero → the official Texas H1830-R blank 2018 sample (its due-date field is blank: Fineprint says *not stated*, quotes verbatim) → evidence click-through → conditional documents → synthetic conflicting-dates flag → the stated scope ("scoped to renewal notices like this one… labeled 'not stated', rather than filled in") → separate online/paper deadline cards.
+- **Video walkthrough (~2:14, narrated):** [docs/video/fineprint-walkthrough.mp4](docs/video/fineprint-walkthrough.mp4) — hero → the official Texas H1830-R blank 2018 sample → quote-first timing index → evidence click-through / source jumps → conditional documents → synthetic labeled samples → the honest unsupported view → the stated scope. Fresh full recording of the current UI.
 - **Live demo:** https://sharonbasovich.github.io/fineprint-warriorhacks/ — deployed by GitHub Pages from `main`.
 
 | | |
 |---|---|
-| ![hero](docs/screenshots/hero.png) | ![official checklist](docs/screenshots/official-checklist.png) |
-| ![blank due date refused](docs/screenshots/deadline-not-stated.png) | ![synthetic conflict flagged](docs/screenshots/synthetic-conflict.png) |
+| ![hero](docs/screenshots/hero.png) | ![quote-first timing index](docs/screenshots/official-checklist.png) |
+| ![conditional document evidence](docs/screenshots/conditional-evidence.png) | ![multiple timing clauses stay visible](docs/screenshots/synthetic-conflict.png) |
+| ![unsupported view for a non-notice](docs/screenshots/unsupported.png) | |
 
 ## Run it
 
@@ -43,8 +44,8 @@ npm run lint
 ```
 src/core/pdf.ts       PDF → text + vector checkbox-mark detection (pdf.js operator list)
 src/core/textdoc.ts   pasted/bundled text → same document model
-src/core/dates.ts     date extraction + per-date classification (local ±45 char context)
-src/core/analyze.ts   deterministic parser → checklist items with verbatim evidence
+src/core/dates.ts     date mention extraction used to locate timing excerpts
+src/core/analyze.ts   deterministic parser → evidence-organizer items with verbatim quotes
 src/ui/render.ts      side-by-side source document + checklist UI
 public/samples/       bundled samples (see SOURCE-MANIFEST.md)
 qa/corpus/            regression QA cases (expected findings + abstention assertions)
@@ -55,7 +56,7 @@ tools/                official-sample extraction script
 
 ## The honest part (limitations)
 
-- **It's deterministic, not magic.** Rules are tuned to renewal-notice structure; a wildly different layout may produce "not stated" where a human would see more.
+- **It's deterministic, not magic.** Rules are tuned to renewal-notice structure; a wildly different layout may produce fewer excerpts where a human would see more — check the full letter.
 - **It reads, it does not decide.** No eligibility, medical, or legal determinations. No forms are submitted, no accounts touched, no government affiliation claimed.
 - **Checkbox detection** reads vector marks in PDFs (and `[x]`/`[ ]`/`☒`/`☐` in text). If a PDF marks boxes in an unusual way, states degrade to "not readable" and are flagged as such rather than filled in.
 - **No OCR.** Image-only scans are rejected loudly.

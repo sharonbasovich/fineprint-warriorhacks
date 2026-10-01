@@ -62,10 +62,8 @@ export interface ProgramEntry {
 
 export type ItemStatus =
   | "action"
-  | "deadline"
-  | "deadline-unknown"
-  | "deadline-unclear"
-  | "deadline-conflict"
+  /** a verbatim timing excerpt from the letter — quoted, not interpreted */
+  | "excerpt"
   | "conditional"
   | "info"
   | "warning"
