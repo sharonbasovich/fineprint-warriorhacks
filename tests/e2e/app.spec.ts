@@ -80,6 +80,49 @@ test.describe("core flow", () => {
     await page.selectOption("#sample-select", "synthetic-conflict");
     await expect(page.locator("#warnings")).toContainText(/synthetic/i);
   });
+
+  test("an unsupported file type is rejected with an honest message", async ({ page }) => {
+    await page.goto("/");
+    await page.setInputFiles("#file-input", {
+      name: "export.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("name,amount\nrent,900")
+    });
+    await expect(page.locator("#status-line")).toContainText(/not a supported file type/i);
+    await expect(page.locator("#results")).not.toBeVisible();
+  });
+
+  test("pasted non-notice text gets the unsupported view, not a confident checklist", async ({
+    page
+  }) => {
+    await page.goto("/");
+    await page.fill("#paste", "name,amount,month\nrent,900.00,January\nfood,300.00,February");
+    await page.click("#analyze-paste");
+    await expect(page.locator("#results")).toBeVisible();
+    await expect(page.locator("#checklist")).toContainText(/not look like a benefits renewal notice/i);
+    await expect(page.locator("#checklist")).not.toContainText(/respond by/i);
+  });
+
+  test("a previous error clears after a successful paste", async ({ page }) => {
+    await page.goto("/");
+    await page.click("#analyze-paste");
+    await expect(page.locator("#status-line")).not.toBeEmpty();
+    await page.fill("#paste", SAMPLE_NOTICE);
+    await page.click("#analyze-paste");
+    await expect(page.locator("#status-line")).toBeEmpty();
+    await expect(page.locator("#checklist")).toContainText("11/01/2026");
+  });
+
+  test("switching samples scrolls the notice pane back to the top", async ({ page }) => {
+    await loadOfficialSample(page);
+    await page.locator("#source-view").evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    await page.selectOption("#sample-select", "synthetic-conflict");
+    await expect(page.locator("#doc-title")).toContainText("different due dates");
+    const top = await page.locator("#source-view").evaluate((el) => el.scrollTop);
+    expect(top).toBe(0);
+  });
 });
 
 test.describe("mobile viewport", () => {

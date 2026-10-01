@@ -36,6 +36,8 @@ const RELATIVE = /\bwithin\s+(\d{1,3})\s+days?\b/gi;
 const REL_HAVE = /\byou\s+(?:will\s+|still\s+)?have\s+(\d{1,3})\s+days?\b/gi;
 const REL_DAYS_TO =
   /\b(\d{1,3})\s+days?\s+to\s+(?:return|send|submit|respond|reply|complete|provide|file|sign|renew|turn\s+in|mail|get|give|bring|take)\b/gi;
+// "due 30 days from the date of this letter", "30 days after your interview"
+const REL_FROM = /\b(\d{1,3})\s+days?\s+(?:from|after)\b/gi;
 const DAY_MONTH_YEAR = new RegExp(
   `\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTHS_RE})\\.?\\s*,?\\s*(\\d{4})\\b`,
   "gi"
@@ -142,6 +144,15 @@ export function findDatesInText(text: string): RawDateMatch[] {
       relative: true
     });
   }
+  for (const m of text.matchAll(REL_FROM)) {
+    if (covered(m.index ?? 0)) continue;
+    out.push({
+      raw: `within ${m[1]} days`,
+      iso: null,
+      index: m.index ?? 0,
+      relative: true
+    });
+  }
   out.sort((a, b) => a.index - b.index);
   return out;
 }
@@ -157,17 +168,18 @@ const DEADLINE_WORDS =
 // needs an action verb tied to the date: "return your form by X",
 // "must be received by X", "postmarked by X"
 const BY_ACTION =
-  /\b(?:due|return(?:ed)?|respond(?:ed)?|repl(?:y|ied)|send|sent|submit(?:ted)?|renew(?:ed)?|complete(?:d)?|filed?|sign(?:ed)?|postmark(?:ed)?|receiv(?:e|ed)|reach(?:ed)?|get|got|deliver(?:ed)?|turn(?:ed)?\s+in|mail(?:ed)?|back)\b[^.]{0,40}\bby\s*$/i;
+  /\b(?:due|return(?:ed)?|respond(?:ed)?|repl(?:y|ied)|send|sent|submit(?:ted)?|renew(?:ed)?|complete(?:d)?|filed?|sign(?:ed)?|postmark(?:ed)?|receiv(?:e|ed)|reach(?:ed)?|get|got|deliver(?:ed)?|turn(?:ed)?\s+in|mail(?:ed)?|back)\b[^.]{0,40}\b(?:by|no\s+later\s+than|on\s+or\s+before)\s*$/i;
 // a date tied to something already done is history, not a deadline:
-// "was reviewed on 09/01/2026", "you returned it by 03/01/2025", "last year"
+// "was reviewed on 09/01/2026", "was due by 03/15 and was processed",
+// "you returned it by 03/01/2025", "last year"
 const PAST_EVENT =
-  /\b(?:was|were|has|have|had)\s+(?:been\s+)?\w+(?:ed|en)\b|\b(?:you|we|i)\s+(?:returned|sent|submitted|filed|signed|mailed|completed|provided|received|got|brought|gave)\b|\blast\s+(?:year|month|week|time)\b|\bpreviously\b|\balready\s+(?:returned|sent|submitted|filed|signed|mailed|completed|provided|received|brought)\b/i;
+  /\b(?:was|were|has|have|had)\s+(?:been\s+)?(?:\w+(?:ed|en)\b|due\b|processed\b|received\b|reviewed\b|over\b|complete\b)|\b(?:you|we|i)\s+(?:returned|sent|submitted|filed|signed|mailed|completed|provided|received|got|brought|gave)\b|\blast\s+(?:year|month|week|time)\b|\bpreviously\b|\balready\s+(?:returned|sent|submitted|filed|signed|mailed|completed|provided|received|brought)\b/i;
 const END_WORDS = /\b(benefits?\s+(might|may|will|could)\s+end|end\s+on|end\s+date|termination|expire)/i;
 const APPT_WORDS = /\b(interview|appointment|meeting|scheduled)\b/i;
 const REVIEW_WORDS = /\breview\s+date\b/i;
 // verbs meaning the READER must act — a "within N days" after these is a real deadline
 const REL_ACTION =
-  /\b(return|send|submit|respond|reply|turn in|mail|complete|provide|bring|file|sign|fill out|give us|renew)\b/i;
+  /\b(return|send|submit|respond|reply|turn in|mail|complete|provide|bring|file|sign|fill out|give us|renew|due)\b/i;
 // the AGENCY as subject — a "within N days" after these is a processing window,
 // not the reader's deadline ("we will tell you", "the office will review")
 const REL_AGENCY =
@@ -177,6 +189,11 @@ const REL_AGENCY =
 // "your form must be postmarked within 10 days"
 const REL_OBLIGATION =
   /\b(?:office|agency|we|us|caseworker|hhsc)\b[^.]{0,30}\b(?:must|needs?\s+to|has\s+to|have\s+to|should|shall)\s+(?:receive|get)\b|\b(?:must|needs?\s+to|has\s+to|have\s+to|should|shall)\s+(?:be\s+)?(?:returned|received|submitted|sent|postmarked|completed|filed|signed|back)\b/i;
+// the ball is with the READER even though the agency is the subject:
+// "if we don't hear from you within 10 days, your case will close",
+// "if we do not get your form within 30 days"
+const REL_CONTACT =
+  /\b(?:hear\s+from\s+you|do\s*n't\s+hear|not\s+hear\s+from|get\s+(?:your|it|the)\s+\w+|receive\s+(?:your|the)\s+\w+)\b/i;
 
 /** classify one match using ONLY the local context around it */
 export function classifyDate(m: RawDateMatch, lineText: string, line: SourceLine): DateMention {
@@ -211,16 +228,23 @@ export function classifyDate(m: RawDateMatch, lineText: string, line: SourceLine
   // can't relabel this date
   const wordScope = `${preClause.slice(-35)}${m.raw}${postClause.slice(0, 60)}`;
   let kind: DateKind = "other";
+  let historical = false;
   if (m.relative) {
     // "return/send/… within N days" is your deadline; "we will … within N
     // days" is theirs — unless the agency wording obligates the reader
-    // ("the office must receive your form within 10 days"). Action verbs can
-    // follow the count ("you have 10 days to return"), so scan both sides.
+    // ("the office must receive your form within 10 days",
+    // "if we don't hear from you within 10 days"). Action verbs can follow
+    // the count ("you have 10 days to return"), so scan both sides.
     kind =
       REL_OBLIGATION.test(preClause) ||
+      REL_CONTACT.test(ctx) ||
       (REL_ACTION.test(ctx) && !REL_AGENCY.test(preClause))
         ? "response-deadline"
         : "review-window";
+    if (kind === "response-deadline" && PAST_EVENT.test(preClause)) {
+      kind = "other";
+      historical = true;
+    }
   } else if (REVIEW_WORDS.test(wordScope)) {
     kind = "review-window";
   } else if (APPT_WORDS.test(wordScope)) {
@@ -229,13 +253,17 @@ export function classifyDate(m: RawDateMatch, lineText: string, line: SourceLine
     kind = "benefit-end";
   } else if (PAST_EVENT.test(preClause)) {
     kind = "other";
+    historical = true;
   } else if (NOTICE_DATE_LABEL.test(preClause)) {
     kind = "notice-date";
-  } else if (
-    (m.iso !== null || m.yearless) &&
-    (BY_ACTION.test(preClause) || DEADLINE_WORDS.test(wordScope))
-  ) {
+  } else if ((m.iso !== null || m.yearless) && BY_ACTION.test(preClause)) {
+    // strict: an explicit present-tense response instruction in the date's own
+    // clause ("return your form by 10/15", "due no later than 07/01")
     kind = "response-deadline";
+  } else if ((m.iso !== null || m.yearless) && DEADLINE_WORDS.test(wordScope)) {
+    // response-shaped but not unambiguous — quoted as a candidate, never
+    // promoted to "Respond by"
+    kind = "possible-deadline";
   }
   return {
     raw: m.raw,
@@ -243,7 +271,8 @@ export function classifyDate(m: RawDateMatch, lineText: string, line: SourceLine
     kind,
     evidence: ev,
     ...(m.relative ? { relative: true } : {}),
-    ...(m.yearless ? { yearless: true } : {})
+    ...(m.yearless ? { yearless : true } : {}),
+    ...(historical ? { historical: true } : {})
   };
 }
 

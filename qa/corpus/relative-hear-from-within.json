@@ -1,0 +1,23 @@
+{
+  "id": "relative-hear-from-within",
+  "description": "\"If we don't hear from you within 10 days, your case will close\" is a relative deadline, not \"not stated\".",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nIf we don't hear from you within 10 days, your case will close.\nItems we need from you: send copies.\n\u2022 Proof of income."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "deadline",
+        "titleContains": "within 10 days"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "status": "deadline-unknown"
+      }
+    ]
+  }
+}

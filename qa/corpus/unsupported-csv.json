@@ -1,0 +1,29 @@
+{
+  "id": "unsupported-csv",
+  "description": "Pasted or uploaded data that is not a renewal notice (a CSV export) must get the honest unsupported view \u2014 no confident checklist.",
+  "input": {
+    "kind": "text",
+    "text": "name,amount,month\nrent,900.00,January\nfood,300.00,February\nutilities,150.00,March"
+  },
+  "expect": {
+    "supported": false,
+    "items": [
+      {
+        "category": "not-said",
+        "status": "warning",
+        "titleContains": "not look like"
+      }
+    ],
+    "forbidden": [
+      {
+        "status": "deadline"
+      },
+      {
+        "category": "documents"
+      },
+      {
+        "category": "do"
+      }
+    ]
+  }
+}

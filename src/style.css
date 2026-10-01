@@ -213,7 +213,12 @@ textarea { resize: vertical; font-family: ui-monospace, monospace; font-size: 0.
   padding-bottom: 0.25rem;
   margin: 0.8rem 0 0.5rem;
 }
-.src-line { padding: 0.06rem 0.25rem; border-radius: 4px; }
+.src-line {
+  padding: 0.06rem 0.25rem;
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .src-line.flash { animation: flashline 2.5s ease; }
 @keyframes flashline {
   0% { background: #ffe08a; }

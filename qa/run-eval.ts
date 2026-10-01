@@ -37,6 +37,7 @@ interface CorpusCase {
     | { kind: "text"; text: string }
     | { kind: "pdf"; path: string };
   expect: {
+    supported?: boolean;
     programs?: ProgramExpectation[];
     items?: ItemExpectation[];
     forbidden?: ItemExpectation[];
@@ -104,6 +105,15 @@ async function runCase(c: CorpusCase): Promise<CaseResult> {
     return res;
   }
   const r = analyze(doc);
+
+  if (c.expect.supported !== undefined) {
+    res.expected++;
+    if (r.supported === c.expect.supported) {
+      res.found++;
+    } else {
+      res.errors.push(`SUPPORTED: expected ${c.expect.supported}, got ${r.supported}`);
+    }
+  }
 
   // expected items
   for (const exp of c.expect.items ?? []) {
@@ -190,7 +200,7 @@ async function main() {
   const lines: string[] = [];
   lines.push(`# Fineprint QA report`);
   lines.push(``);
-  lines.push(`Held-out corpus: ${files.length} cases · generated ${new Date().toISOString().slice(0, 19)}Z`);
+  lines.push(`Regression corpus: ${files.length} cases · generated ${new Date().toISOString().slice(0, 19)}Z`);
   lines.push(``);
   lines.push(`| Case | Coverage | Abstention violations | Program misses | Citation errors |`);
   lines.push(`|---|---|---|---|---|`);
@@ -203,7 +213,7 @@ async function main() {
   lines.push(``);
   lines.push(`Citation integrity: every evidence quote is checked verbatim against the source lines. A quote that does not appear word-for-word in the document counts as an error — paraphrased citations are failures, not features.`);
   lines.push(``);
-  lines.push(`Scope note: this corpus is authored by the same project session that built the parser. These numbers are regression coverage — evidence the parser behaves as designed on these inputs — not independent third-party verification.`);
+  lines.push(`Scope note: this corpus is authored by the project team, and cases were visible during parser development and tuning. These numbers are regression coverage — evidence the parser behaves as designed on these inputs — not independent, held-out, or third-party verification of accuracy.`);
   lines.push(``);
   const anyErr = results.some((r) => r.errors.length > 0);
   if (anyErr) {

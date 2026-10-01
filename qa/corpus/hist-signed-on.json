@@ -1,6 +1,6 @@
 {
   "id": "hist-signed-on",
-  "description": "A past-tense date ('You signed your last form on 08/20/2026.') describes history, not a deadline \u2014 no 'Respond by' may be invented.",
+  "description": "A past-tense date ('You signed your last form on 08/20/2026.') describes history, not a deadline \u2014 abstains with the full quote ('Past date mentioned'), never 'Respond by'.",
   "input": {
     "kind": "text",
     "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nYou signed your last form on 08/20/2026.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
@@ -9,7 +9,12 @@
     "items": [
       {
         "category": "dates",
-        "status": "deadline-unclear"
+        "status": "info",
+        "titleContains": "Past date"
+      },
+      {
+        "category": "dates",
+        "status": "deadline-unknown"
       }
     ],
     "forbidden": [

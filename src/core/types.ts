@@ -32,6 +32,7 @@ export interface Evidence {
 export type DateKind =
   | "notice-date"
   | "response-deadline"
+  | "possible-deadline"
   | "benefit-end"
   | "appointment"
   | "review-window"
@@ -46,6 +47,8 @@ export interface DateMention {
   relative?: boolean;
   /** a month+day with no year printed — ambiguous, never resolved silently */
   yearless?: boolean;
+  /** clause describes something already done — history, not a current deadline */
+  historical?: boolean;
   evidence: Evidence;
 }
 
@@ -86,6 +89,9 @@ export interface ChecklistItem {
 }
 
 export interface AnalysisResult {
+  /** false when the text does not look like a supported renewal notice —
+   *  no confident checklist is generated for it */
+  supported: boolean;
   formTitle: string | null;
   noticeDate: DateMention | null;
   programs: ProgramEntry[];

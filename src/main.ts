@@ -31,6 +31,8 @@ function setStatus(msg: string, isError = false) {
 async function loadDoc(doc: NoticeDocument) {
   const result = analyze(doc);
   renderResult(doc, result);
+  setStatus("");
+  $("#source-view").scrollTop = 0;
   $("#results").hidden = false;
   $("#results").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -54,6 +56,17 @@ async function loadSample(id: string) {
 
 async function loadFile(file: File) {
   setStatus(`Reading ${file.name}…`);
+  const okType =
+    /\.(pdf|txt|text)$/i.test(file.name) ||
+    file.type === "application/pdf" ||
+    file.type === "text/plain";
+  if (!okType) {
+    setStatus(
+      `"${file.name}" is not a supported file type — Fineprint reads text PDFs and .txt files only.`,
+      true
+    );
+    return;
+  }
   try {
     let doc: NoticeDocument;
     if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
@@ -65,7 +78,6 @@ async function loadFile(file: File) {
     } else {
       doc = extractText(await file.text(), file.name);
     }
-    setStatus("");
     await loadDoc(doc);
   } catch (e) {
     setStatus(

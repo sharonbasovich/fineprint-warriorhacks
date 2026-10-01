@@ -1,0 +1,22 @@
+{
+  "id": "conditional-no-income-statement",
+  "description": "A leading \"If no one...\" clause gates the document AND the document name must be preserved in the title.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nItems we need from you: send copies.\n\u2022 If no one in your home has income, sign the No Income Statement.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "documents",
+        "status": "conditional",
+        "titleContains": "No Income Statement"
+      },
+      {
+        "category": "documents",
+        "status": "info",
+        "titleContains": "Proof of income"
+      }
+    ]
+  }
+}

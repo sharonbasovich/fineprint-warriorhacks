@@ -39,3 +39,63 @@ Also landed this round: `must be returned by X` participle forms (`return(?:ed)?
 - `docs/video/fineprint-walkthrough.mp4` re-recorded (2:22): the ~1:26–1:33 segment now scrolls to the **Housing costs** conditional card so screen matches narration ("Housing costs, only if you're applying for SNAP"). Old video showed the Identity card during Housing narration.
 - `docs/screenshots/*.png` all recaptured against the new build (new privacy badge, printed-on info card, conflict card with dual quotes).
 - Devin (AI) + ElevenLabs attribution retained in README and SOURCE-MANIFEST.
+
+---
+
+# Repair report round 4 — conservative scope narrowing
+
+Repo head `a96cce1` (re-reviewed base). This repair lands as a new commit on top.
+Round-4 review: old 10/10 and prior 19/19 pass, but 17/24 fresh adversarial
+notices pass. Rather than continue a phrase-pattern patch loop, the product is
+now **narrowed to an evidence reader for Texas H1830-R-style renewal notices**.
+
+## Scope change (explicit, not silently redefined)
+
+- `AnalysisResult.supported`: text without renewal-notice structure
+  (renewal/benefits/check-mark/due-dates/items-we-need wording) returns an
+  honest unsupported view — warning + source text, **no checklist**.
+- `response-deadline` now requires an **explicit present-tense action + by /
+  no later than / on or before** clause, or an explicit relative window
+  ("within N days", "you have N days", "due N days from…", "if we don't hear
+  from you within N days").
+- A date near bare deadline words ("due", "deadline") without an action clause
+  classifies as **possible-deadline** → "Deadline: unclear" card quoting the
+  sentence verbatim.
+- **Historical/mixed context abstains**: past-tense events get a
+  "Past date mentioned" info card with the full quote — never "Respond by".
+- Document items keep the letter's **complete wording verbatim** in the detail;
+  `if/unless/only/even if` anywhere in the bullet appends
+  *"Read the condition in the letter — Fineprint quotes it rather than
+  deciding it for you."* A condition gates the document only when it leads the
+  bullet or sits in the document's own first sentence; a named document's
+  title is never dropped.
+
+## Findings → fixes
+
+| # | Failure reported | Fix |
+|---|---|---|
+| 1 | "previous form was due by 03/15/2026 and was processed" → Respond by | `PAST_EVENT` extended (`was due`, `was processed`, passive Ved/Ven); strict tier requires `BY_ACTION`; → "Past date" info + deadline not stated. Case: `hist-form-due-processed`, `mixed-historical-and-deadline`. |
+| 2 | "If no one… sign the No Income Statement" → lost name + label | `docItemTitle`: leading if/unless clause stripped, then verb+article stripped → title "No Income Statement", `conditional`. Case: `conditional-no-income-statement`. |
+| 3 | "Proof of address. If you moved, send a new lease." → optional + cut title | Title = first sentence ("Proof of address"); `gateCondition` only inspects the bullet's leading clause or the doc's own first sentence → stays `info`, condition kept verbatim in detail. Case: `doc-later-sentence-condition`. |
+| 4 | "due 30 days from the date of this letter" → not stated | `REL_FROM` (`N days from/after`) → relative response-deadline. Case: `relative-due-days-from-letter`. |
+| 5 | "If we don't hear from you within 10 days, your case will close" → not stated | `REL_CONTACT` (hear from you / receive your form within N) → relative response-deadline. Case: `relative-hear-from-within`. |
+| 6 | Dropped CSV accepted as renewal input | File-type rejection in `loadFile` (.pdf/.txt only) + scope gate → unsupported view for non-notice text. Case: `unsupported-csv`. |
+| 7 | Stale scroll survives sample switch | `loadDoc` resets `#source-view` scrollTop. E2E: "switching samples scrolls the notice pane back to the top". |
+| 8 | Empty-paste error survives successful paste | `loadDoc` clears status on success. E2E: "a previous error clears after a successful paste". |
+| 9 | Long sample URL overflows phone pane | `.src-line` `overflow-wrap:anywhere; word-break:break-word`. |
+| 10 | Video ~1:54 "never guessed" claim | s8 narration regenerated (ElevenLabs): "Fineprint is scoped to renewal notices like this one… labeled 'not stated', rather than filled in." Video remuxed (2:28). |
+
+## Evidence wording corrections
+
+- 46-case corpus relabeled **builder-authored regression coverage**; report
+  header "Held-out corpus" → "Regression corpus"; scope note states cases were
+  visible during tuning and are no longer held out (README, run-eval,
+  adversarial README, CI step name).
+- 5 historical-date specs updated to the new abstention contract
+  ("Past date" info + deadline-unknown) — documented here, not silent.
+
+## Checks
+
+- vitest 30/30 · eval 53 cases / 106 coverage checks = 100%, 0 abstention
+  violations, 0 citation errors · Playwright E2E 13/13 · lint/typecheck/build.
+- 7 new corpus cases pin every round-4 finding.

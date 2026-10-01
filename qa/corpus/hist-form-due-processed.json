@@ -1,0 +1,33 @@
+{
+  "id": "hist-form-due-processed",
+  "description": "A historical deadline (\"Your previous form was due by 03/15/2026 and was processed.\") is history, not a current deadline \u2014 abstain with the full quote.",
+  "input": {
+    "kind": "text",
+    "text": "CEDAR COUNTY BENEFITS\nIt is time to renew your benefits.\nThe benefits you need to renew have a check-mark next to them:\n[x] SNAP\nDue dates:\nYour previous form was due by 03/15/2026 and was processed.\nItems we need from you: send copies.\n\u2022 Proof of income: last 4 pay stubs."
+  },
+  "expect": {
+    "items": [
+      {
+        "category": "dates",
+        "status": "info",
+        "titleContains": "Past date",
+        "evidenceContains": "03/15/2026"
+      },
+      {
+        "category": "dates",
+        "status": "deadline-unknown"
+      }
+    ],
+    "forbidden": [
+      {
+        "category": "dates",
+        "status": "deadline"
+      },
+      {
+        "category": "dates",
+        "status": "deadline-conflict",
+        "titleContains": "03/15"
+      }
+    ]
+  }
+}

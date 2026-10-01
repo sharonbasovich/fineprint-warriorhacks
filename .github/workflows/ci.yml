@@ -18,7 +18,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - name: Held-out QA corpus
+      - name: Regression QA corpus
         run: npx tsx qa/run-eval.ts
       - name: Browser E2E
         run: |

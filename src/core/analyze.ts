@@ -143,7 +143,7 @@ function conditionOf(text: string): string | null {
   // fallback alternatives like "if you do not have one, bring any photo ID" —
   // those don't gate the document, they rescue it
   const IF_CLAUSE =
-    /\b(?:even\s+)?if\s+(?:not\b|you\b|your\b|anyone\b|any person\b|a person\b|someone\b|they\b|them\b|the child\b|children\b|it\b)[^.:]{0,120}/gi;
+    /\b(?:even\s+)?if\s+(?:not\b|you\b|your\b|anyone\b|any person\b|a person\b|someone\b|they\b|them\b|the child\b|children\b|it\b|no\s+one\b|nobody\b|everyone\b)[^.:]{0,120}/gi;
   const NEGATED_FALLBACK =
     /^if\s+(?:you|anyone|any person|a person|someone|they|them|it|the child|children)\s+(?:do\s+not|don'?t|cannot|can'?t|can\s+not|will\s+not|won'?t|have\s+no|lack)\b/i;
   for (const m3 of text.matchAll(IF_CLAUSE)) {
@@ -165,14 +165,40 @@ function conditionOf(text: string): string | null {
 }
 
 function docItemTitle(text: string): string {
-  const colon = text.indexOf(":");
-  const paren = text.indexOf("(");
+  // bullet starting with a condition — the document name is in the clause
+  // after it: "If no one has income, sign the No Income Statement"
+  if (/^(?:if|unless|even if)\b/i.test(text)) {
+    const rest = text
+      .replace(/^(?:if|unless|even if)\b[^,.;:]*[,]\s*/i, "")
+      .replace(/^(?:sign|send|bring|complete|fill out|provide|show|include|attach|mail|give)\s+/i, "")
+      .replace(/^(?:the|a|an|your|any|one|a new)\s+/i, "")
+      .replace(/[,.;:]+$/, "")
+      .trim();
+    if (rest.length >= 3 && rest.length <= 80) return rest;
+  }
+  // "Proof of address. If you moved, send a new lease." — the document name
+  // is the first sentence, not the conditional instruction after it
+  const sentence = text.split(/(?<=[.!?])\s+/)[0] ?? text;
+  const colon = sentence.indexOf(":");
+  const paren = sentence.indexOf("(");
   let cut = -1;
   for (const c of [colon, paren]) {
     if (c > 0 && (cut < 0 || c < cut)) cut = c;
   }
-  if (cut > 0 && cut < 80) return text.slice(0, cut).trim();
-  return text.split(/\s+/).slice(0, 8).join(" ").replace(/[,;:]$/, "");
+  if (cut > 0 && cut < 80) return sentence.slice(0, cut).trim();
+  return sentence.split(/\s+/).slice(0, 8).join(" ").replace(/[,.;:!?]+$/, "");
+}
+
+/** a condition gates the document only when it sits in the doc's own clause —
+ *  "Proof of address. If you moved, send a new lease." keeps the doc required
+ *  and the later sentence stays verbatim in the detail instead */
+function gateCondition(bullet: string): string | null {
+  if (/^(?:if|unless|even if)\b/i.test(bullet)) {
+    const m = bullet.match(/^(if|unless)\b[^,.;:]*/i);
+    return m ? m[0].trim() : conditionOf(bullet);
+  }
+  const firstSentence = bullet.split(/(?<=[.!?])\s+/)[0] ?? bullet;
+  return conditionOf(firstSentence);
 }
 
 function escapeRe(s: string): string {
@@ -235,6 +261,39 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   const lines = doc.pages.flatMap((p) => p.lines);
   const items: ChecklistItem[] = [];
   const warnings = [...doc.warnings];
+  const allText = lines.map((l) => l.text).join(" ");
+
+  // scope gate — Fineprint reads benefits renewal notices (H1830-R-style) or
+  // notice-shaped letters (renewal / benefits / due-date / check-mark /
+  // items-we-need structure). Anything else gets an honest unsupported view,
+  // not a confident checklist.
+  const supported =
+    RENEW_INTRO.test(allText) ||
+    NEED_ITEMS.test(allText) ||
+    DUE_SECTION.test(allText) ||
+    CHECK_MARK_SENTENCE.test(allText) ||
+    /\b(renew|renewal|benefit|coverage|assistance|eligib|SNAP|TANF|Medicaid)\b/i.test(allText);
+  if (!supported) {
+    warnings.unshift(
+      "Unsupported document: this text does not look like a benefits renewal notice — no checklist generated."
+    );
+    items.push(
+      item("not-said", "warning", "This does not look like a benefits renewal notice", [],
+        "Fineprint is scoped to renewal notices like Texas form H1830-R — it did not find renewal-notice structure here. The letter text is shown as-is; read it directly, and check for a deadline yourself.")
+    );
+    for (const w of warnings.slice(1)) {
+      items.push(item("not-said", "warning", "Unreadable content", [], w));
+    }
+    return {
+      supported: false,
+      formTitle: null,
+      noticeDate: null,
+      programs: [],
+      dates: allDateMentions(lines),
+      items,
+      warnings
+    };
+  }
 
   const dateMentions = allDateMentions(lines);
 
@@ -323,8 +382,9 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   // yearless ("October 15") or printed in the due section untied to an action
   const ambigDue = dateMentions.filter(
     (d) =>
+      d.kind === "possible-deadline" ||
       (d.kind === "response-deadline" && d.yearless === true) ||
-      (d.kind === "other" && inDue(d.evidence.page, d.evidence.lineIndex))
+      (d.kind === "other" && !d.historical && inDue(d.evidence.page, d.evidence.lineIndex))
   );
   const consumed = new Set<DateMention>();
 
@@ -389,12 +449,12 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   ) {
     const raws = ambigDue.map((d) => `"${d.raw}"`).join(", ");
     const why = ambigDue.some((d) => d.yearless)
-      ? "is missing a year"
-      : "is not clearly tied to an action";
+      ? "at least one of them is missing a year"
+      : "the wording around them is not an unambiguous present-tense deadline instruction";
     items.push(
       item("dates", "deadline-unclear", "Response deadline: unclear in this notice",
         ambigDue.map((d) => d.evidence),
-        `The letter shows ${raws} near its due-date wording, but it ${why}. Fineprint will not guess — confirm the real deadline by phone.`)
+        `The letter prints ${raws} where a response deadline might live, but ${why}. Each quoted sentence is shown verbatim — read it and confirm the real deadline by phone.`)
     );
     ambigDue.forEach((x) => consumed.add(x));
   }
@@ -430,6 +490,9 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
       const all = dateMentions.filter((x) => x.kind === "review-window" && x.raw === d.raw).map((x) => x.evidence);
       items.push(item("dates", "info", `Processing window mentioned: "${d.raw}"`, all,
         "A 'within N days' rule is an agency processing window, not your deadline."));
+    } else if (d.iso !== null && d.historical) {
+      items.push(item("dates", "info", `Past date mentioned in the letter: ${d.raw}`, [d.evidence],
+        "The letter ties this date to something already done — it is history, not a current deadline. Read the quoted sentence yourself."));
     } else if (d.iso !== null) {
       items.push(item("dates", "info", `Date seen in the letter: ${d.raw}`, [d.evidence],
         "Listed so you can see it — the letter does not clearly tie this date to an action you must take."));
@@ -443,16 +506,21 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
     const bullets = collectBullets(lines, needIdx + 1);
     for (const b of bullets) {
       if (RIGHTS.test(b.text)) break;
-      const cond = conditionOf(b.text);
+      const cond = gateCondition(b.text);
       const title = docItemTitle(b.text);
       const evis = b.lines.slice(0, 3).map(ev);
+      const hasCondWords = /\b(?:if|unless|only|even if)\b/i.test(b.text);
+      const verbatim = `The letter's full wording: "${b.text}"`;
+      const readNote = hasCondWords
+        ? " Read the condition in the letter — Fineprint quotes it rather than deciding it for you."
+        : "";
       if (cond) {
         items.push(
           item("documents", "conditional", title, evis,
-            `The letter ties this document to a condition: "${cond}". It is not automatically required.`)
+            `${verbatim} The letter ties this document to a condition — it may not apply to you.${readNote}`)
         );
       } else {
-        items.push(item("documents", "info", title, evis));
+        items.push(item("documents", "info", title, evis, `${verbatim}${readNote}`));
       }
     }
   }
@@ -534,5 +602,5 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
     items.push(item("not-said", "warning", "Unreadable content", [], w));
   }
 
-  return { formTitle, noticeDate, programs, dates: dateMentions, items, warnings };
+  return { supported: true, formTitle, noticeDate, programs, dates: dateMentions, items, warnings };
 }
