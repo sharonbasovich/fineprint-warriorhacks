@@ -25,10 +25,10 @@ source.
 
 Fineprint is an **evidence reader**: it turns a renewal notice into an
 organized index where every entry is linked to the exact sentence and page it
-came from. It deliberately does **not** interpret — there is no "your
-deadline is X" card, no verdict on whether a document is required, no
-eligibility judgment. It quotes the letter, highlights what to look at, and
-says honestly what it could not find.
+came from. It presents source-linked excerpts without deciding deadlines
+or eligibility — there is no "your deadline is X" card, no verdict on
+whether a document is required. It quotes the letter, highlights what to
+look at, and says honestly what it could not find.
 
 ## What was built
 
@@ -59,9 +59,10 @@ says honestly what it could not find.
   verified word-for-word against source lines by the QA harness — a
   paraphrased citation fails the test suite.
 - Sentence-aware excerpting: timing mentions expand to their full sentence
-  context across soft line wraps, so a negation or condition on the previous
-  line is never clipped away; overlapping spans merge into larger context
-  blocks.
+  context across soft line wraps; the implementation preserves complete
+  sentence context in the tested wrapped-negation cases — users still need
+  to check the full letter — and overlapping spans merge into larger
+  context blocks.
 - Deployed via GitHub Pages (Actions), repo CI runs lint, typecheck, unit
   tests, the regression corpus, browser E2E, and the production build on
   every push.
@@ -99,17 +100,20 @@ the review-driven failure history and fixes).
 novel layouts may yield fewer excerpts where a human would see more; excerpt
 coverage can be incomplete and users are told to check the full letter; no
 OCR; scope is a stated intended-use limit, not a reliable classifier; no
-eligibility, legal, or medical determinations of any kind.
+eligibility, legal, or medical determinations of any kind. Known accepted
+limitations: contact text may remain inside a document excerpt; one source
+line is highlighted per evidence click; and lines beginning "Source:" may be
+omitted by annotation filtering even when they are part of a real letter.
 
 ## AI & tooling attribution
 
-This project was **AI-led**: the code, tests, QA corpus, documentation, and
-demo assets were written and iterated by **Devin** (an AI software engineer
-by Cognition) under human direction from Sharon Basovich, who set the
-product intent, coordinated independent review cycles, and owns submission
-decisions. The walkthrough voiceover was generated with **ElevenLabs**
-text-to-speech from a script written for this project. No AI runs inside the
-app itself — parsing is deterministic TypeScript.
+Fineprint was built for Sharon Basovich with AI-led assistance from dot and
+Devin (Cognition), including project planning, implementation, tests, review
+coordination, documentation, and demo preparation. Sharon authorized the
+project and its submission campaign. This description does not imply that
+Sharon personally implemented or reviewed the code. The walkthrough
+voiceover uses ElevenLabs text-to-speech. The application itself runs
+deterministic TypeScript without a runtime AI service.
 
 ## Sample document source & rights
 
@@ -127,7 +131,7 @@ original, clearly-labeled synthetic documents written for this project.
 - **Live demo:** https://sharonbasovich.github.io/fineprint-warriorhacks/
 - **Repository:** https://github.com/sharonbasovich/fineprint-warriorhacks
 - **Walkthrough video (~2:14, narrated):**
-  [docs/video/fineprint-walkthrough.mp4](fineprint-walkthrough.mp4) —
+  [docs/video/fineprint-walkthrough.mp4](video/fineprint-walkthrough.mp4) —
   https://github.com/sharonbasovich/fineprint-warriorhacks/blob/main/docs/video/fineprint-walkthrough.mp4
 - **Screenshots:** [docs/screenshots/](screenshots/) —
   https://github.com/sharonbasovich/fineprint-warriorhacks/tree/main/docs/screenshots

@@ -65,7 +65,7 @@ tools/                official-sample extraction script
 
 ## AI attribution
 
-AI-led development: the code, tests, QA corpus, and this documentation were written and iterated by Devin (an AI software engineer by Cognition) under human direction from Sharon Basovich, who set the product intent, coordinated independent review, and owns submission decisions. The walkthrough's voiceover was generated with ElevenLabs text-to-speech from a script written for this project. Parsing is deterministic TypeScript — **no LLM is used or simulated at runtime**; summary labels are templated phrasing, always paired with the verbatim quote they came from.
+Fineprint was built for Sharon Basovich with AI-led assistance from dot and Devin (Cognition), including project planning, implementation, tests, review coordination, documentation, and demo preparation. Sharon authorized the project and its submission campaign. This description does not imply that Sharon personally implemented or reviewed the code. The walkthrough voiceover uses ElevenLabs text-to-speech. The application itself runs deterministic TypeScript — **no LLM is used or simulated at runtime**; summary labels are templated phrasing, always paired with the verbatim quote they came from.
 
 ## License
 
