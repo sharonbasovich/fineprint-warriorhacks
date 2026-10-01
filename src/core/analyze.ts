@@ -238,6 +238,11 @@ const TIMING_HEADER = /^\s*(?:due\s*dates?|important\s*dates?|deadlines?|key\s*d
 // extraction disclaimers) are metadata, not letter content — never quote them.
 const ANNOTATION =
   /^source:|official public sample|text extracted locally|this is a sample form|synthetic demo document|invented for fineprint|not a real government notice|all names, dates|markers transcribed|document-comprehension demonstration|pasted below/i;
+
+/** Is this line one of our own provenance notes rather than letter content? */
+export function isAnnotationText(text: string): boolean {
+  return ANNOTATION.test(text.trim());
+}
 // Record-style lines that start a new entry rather than continuing a
 // sentence: "Call: 1-800…", "DATE: 01/23/2019", "CASE NO 123".
 const FIELD_LABEL = /^[A-Za-z][A-Za-z0-9 ./#()'-]{0,20}:/;
@@ -263,7 +268,14 @@ function startsNewRecord(text: string): boolean {
 
 export function analyze(doc: NoticeDocument): AnalysisResult {
   nextId = 0;
-  const lines = doc.pages.flatMap((p) => p.lines);
+  // Shared boundary for EVERY output path: provenance lines we add to bundled
+  // samples (SOURCE:, "This is a SAMPLE form…", extraction disclaimers) are
+  // metadata about the document, not letter content. They stay visible in the
+  // source pane, but are ineligible for evidence citations, summaries, scope
+  // detection, and date mentions — nothing Fineprint emits may quote them.
+  const lines = doc.pages
+    .flatMap((p) => p.lines)
+    .filter((l) => !isAnnotationText(l.text));
   const items: ChecklistItem[] = [];
   const warnings = [...doc.warnings];
   const allText = lines.map((l) => l.text).join(" ");

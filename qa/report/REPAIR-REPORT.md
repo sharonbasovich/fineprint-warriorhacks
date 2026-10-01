@@ -252,3 +252,43 @@ date judgments anywhere.
 - `npm run eval` — 69 regression cases · 201/201 coverage · 0 abstention
   violations · 0 authoritative-phrase leaks · 0 citation errors
 - `npx playwright test` — 13/13 browser E2E
+
+# Round 7 — narrow P2 patch (annotation boundary everywhere + mobile sticky)
+
+Reviewed base: `571f52a`. Independent review: no P0/P1; two P2 acceptance defects only.
+
+## 1. Provenance annotations ineligible on ALL output paths
+
+Round 6 filtered annotations only inside timing-excerpt construction; the
+"This letter asks you to renew your benefits" summary card could still cite
+the `SOURCE:` line because `RENEW_INTRO` matched it first. The filter moved to
+the top of `analyze()`: `lines` — used by the scope gate, every summary,
+document, contact, program, action, timing and unsupported path — excludes
+annotation lines by definition, via exported `isAnnotationText`. Nothing the
+pipeline emits can quote our own notes; the renew card now cites the real
+intro line ("It is time to renew your benefits."). If no real letter line
+matched, no card would be emitted at all (already the guard).
+
+Regression: a global check in `qa/run-eval.ts` scans EVERY produced evidence
+quote and date mention against `isAnnotationText` — an annotation citation
+counts as a citation error AND an abstention violation on any corpus case
+(current corpus includes `SOURCE:` lines and all sample notes). Unit test in
+`tests/analyze.test.ts` pins the same boundary plus the renew-card citation.
+
+## 2. Sticky source pane restricted to desktop
+
+The pinned letter pane overlapped checklist cards at 375/390px. `position:
+sticky` now applies only under `@media (min-width: 861px)` — the mobile
+single-column stack keeps normal document flow. New viewport test scrolls
+through every checklist card at 375px and asserts `elementFromPoint` at each
+card's centre hits inside the card (obscured content fails), plus asserts the
+computed position is not `sticky`.
+
+## Checks (this head)
+
+- `npm run lint` clean · `npm run typecheck` clean
+- `npx vitest run` — 90/90
+- `npm run eval` — 69 regression cases · 201/201 coverage · 0 abstention
+  violations · 0 authoritative-phrase leaks · 0 annotation leaks ·
+  0 citation errors
+- `npx playwright test` — 14/14 browser E2E

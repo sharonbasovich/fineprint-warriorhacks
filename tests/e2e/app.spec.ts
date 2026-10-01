@@ -142,6 +142,37 @@ test.describe("mobile viewport", () => {
     await expect(page.locator("#checklist")).toBeVisible();
     await expect(page.locator("#source-view")).toBeVisible();
   });
+
+  test("source pane is not sticky at phone width and cards are never obscured", async ({
+    page
+  }) => {
+    await loadOfficialSample(page);
+    // desktop pins the letter pane; mobile must keep normal document flow
+    const pos = await page
+      .locator(".panes > .pane:first-child")
+      .evaluate((el) => getComputedStyle(el).position);
+    expect(pos).not.toBe("sticky");
+
+    // scroll through every checklist card: the topmost element at each
+    // card's centre must belong to the card itself — nothing may cover it
+    const items = page.locator(".cl-item");
+    const count = await items.count();
+    for (let i = 0; i < count; i++) {
+      const el = items.nth(i);
+      await el.scrollIntoViewIfNeeded();
+      const inside = await el.evaluate((node) => {
+        const r = node.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = Math.min(
+          Math.max(r.top + Math.min(r.height, 28) / 2, r.top + 2),
+          r.bottom - 2
+        );
+        const hit = document.elementFromPoint(cx, cy);
+        return hit !== null && node.contains(hit);
+      });
+      expect(inside, `checklist card ${i} obscured at 375px`).toBe(true);
+    }
+  });
 });
 
 test.describe("zoom", () => {

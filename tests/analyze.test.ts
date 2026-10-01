@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractText } from "../src/core/textdoc";
-import { analyze } from "../src/core/analyze";
+import { analyze, isAnnotationText } from "../src/core/analyze";
 import { findDatesInText } from "../src/core/dates";
 import { readFileSync, readdirSync } from "node:fs";
 
@@ -286,5 +286,23 @@ describe("citation integrity", () => {
         expect(src.has(e.quote)).toBe(true);
       }
     }
+  });
+
+  it("provenance notes are never cited as letter evidence on any path", () => {
+    const doc = loadSample("h1830r-official-sample.txt");
+    const r = analyze(doc);
+    for (const it of r.items) {
+      for (const e of it.evidence) {
+        expect(isAnnotationText(e.quote), `annotation cited: ${e.quote}`).toBe(false);
+      }
+    }
+    for (const d of r.dates) {
+      expect(isAnnotationText(d.raw), `annotation date: ${d.raw}`).toBe(false);
+    }
+    // the renew summary must cite the real intro line, not the SOURCE: note
+    const renew = r.items.find((i) => i.title.includes("asks you to renew"));
+    expect(
+      renew?.evidence.some((e) => e.quote.includes("time to renew your benefits"))
+    ).toBe(true);
   });
 });

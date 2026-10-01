@@ -14,7 +14,7 @@
 import { readFileSync, readdirSync, mkdirSync, writeFileSync } from "node:fs";
 import { extractText } from "../src/core/textdoc";
 import { extractPdf } from "../src/core/pdf";
-import { analyze } from "../src/core/analyze";
+import { analyze, isAnnotationText } from "../src/core/analyze";
 import { SAMPLES } from "../src/core/samples";
 import type { ChecklistItem, NoticeDocument } from "../src/core/types";
 
@@ -191,6 +191,20 @@ async function runCase(c: CorpusCase): Promise<CaseResult> {
           res.errors.push(`EVIDENCE quote not found verbatim in source: "${ev.quote.slice(0, 80)}"`);
         }
       }
+      // annotation boundary: no citation or date excerpt may quote our own
+      // provenance notes (SOURCE:, SAMPLE disclaimers, extraction notes)
+      if (isAnnotationText(ev.quote)) {
+        res.citationErrors++;
+        res.forbiddenViolations++;
+        res.errors.push(`ANNOTATION quoted as evidence: "${ev.quote.slice(0, 80)}"`);
+      }
+    }
+  }
+  for (const d of r.dates) {
+    if (isAnnotationText(d.raw)) {
+      res.citationErrors++;
+      res.forbiddenViolations++;
+      res.errors.push(`ANNOTATION surfaced as a date mention: "${d.raw.slice(0, 80)}"`);
     }
   }
   return res;

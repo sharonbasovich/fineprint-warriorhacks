@@ -35,7 +35,8 @@
       {
         "category": "do",
         "status": "action",
-        "titleContains": "renew"
+        "titleContains": "renew",
+        "evidenceContains": "time to renew your benefits"
       },
       {
         "category": "contacts",

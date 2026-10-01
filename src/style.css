@@ -186,10 +186,13 @@ textarea { resize: vertical; font-family: ui-monospace, monospace; font-size: 0.
   align-items: start;
 }
 /* the letter stays visible while the checklist scrolls — every card's
-   evidence quote can be checked against the pinned source */
-.panes > .pane:first-child {
-  position: sticky;
-  top: 0.75rem;
+   evidence quote can be checked against the pinned source. Desktop only:
+   on the mobile single-column stack the panes keep normal document flow. */
+@media (min-width: 861px) {
+  .panes > .pane:first-child {
+    position: sticky;
+    top: 0.75rem;
+  }
 }
 .pane {
   background: var(--panel);
