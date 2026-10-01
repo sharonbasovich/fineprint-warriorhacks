@@ -1,6 +1,6 @@
 # Fineprint QA report
 
-Regression corpus: 69 cases · generated 2026-10-01T10:38:43Z
+Regression corpus: 69 cases · generated 2026-10-01T11:05:10Z
 
 | Case | Coverage | Abstention violations | Program misses | Citation errors |
 |---|---|---|---|---|
