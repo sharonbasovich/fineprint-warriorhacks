@@ -45,6 +45,11 @@ interface CorpusCase {
   };
 }
 
+/** Phrases that would constitute an authoritative deadline/dating claim —
+ *  none may ever appear in output on any input. */
+const AUTHORITATIVE_PHRASES =
+  /respond\s+(by|within)|deadline\s*:|not\s+stated\s+in\s+this\s+notice|conflicting\s+due\s+dates|past\s+date\s+mentioned|benefits\s+may\s+end|letter\s+printed|processing\s+window|only\s+response\s+date|must\s+return\s+by/i;
+
 function matches(it: ChecklistItem, e: ItemExpectation): boolean {
   if (e.category && it.category !== e.category) return false;
   if (e.status && it.status !== e.status) return false;
@@ -105,6 +110,21 @@ async function runCase(c: CorpusCase): Promise<CaseResult> {
     return res;
   }
   const r = analyze(doc);
+
+  // Structural contract: no item may ever assert a deadline, date type, or
+  // currency status — the dates section only carries verbatim excerpts.
+  res.expected++;
+  const leaked = r.items.filter((i) =>
+    AUTHORITATIVE_PHRASES.test(`${i.title}\n${i.detail ?? ""}`)
+  );
+  if (leaked.length === 0) {
+    res.found++;
+  } else {
+    res.errors.push(
+      `ASSERTION LEAK: ${leaked.map((i) => `"${i.title}"`).join(", ")}`
+    );
+    res.forbiddenViolations++;
+  }
 
   if (c.expect.supported !== undefined) {
     res.expected++;
