@@ -24,8 +24,8 @@ source.
 ## The solution
 
 Fineprint is an **evidence reader**: it turns a renewal notice into an
-organized index where every entry is linked to the exact sentence and page it
-came from. It presents source-linked excerpts without deciding deadlines
+organized index of selected passages, with clickable source quotes and page
+references. It presents source-linked excerpts without deciding deadlines
 or eligibility — there is no "your deadline is X" card, no verdict on
 whether a document is required. It quotes the letter, highlights what to
 look at, and says honestly what it could not find.
@@ -55,9 +55,10 @@ look at, and says honestly what it could not find.
   no runtime AI — all parsing is deterministic rules over extracted text.
 - PDF pipeline extracts text plus vector checkbox-mark detection from the
   pdf.js operator list; pasted text uses the same document model.
-- Evidence model: every emitted item carries verbatim quotes that are
-  verified word-for-word against source lines by the QA harness — a
-  paraphrased citation fails the test suite.
+- Evidence model: extracted passages carry source quotes and page/line
+  references. The QA harness checks citation integrity on the project's
+  regression cases; general guidance and missing-information notices may
+  have no source quote.
 - Sentence-aware excerpting: timing mentions expand to their full sentence
   context across soft line wraps; the implementation preserves complete
   sentence context in the tested wrapped-negation cases — users still need
