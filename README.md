@@ -2,7 +2,7 @@
 
 **A confusing letter arrived. One missed date could matter. Fineprint shows you the letter's own words — organized, source-linked, never decided for you.**
 
-Fineprint turns a benefits-renewal notice into an organized evidence index where **every entry is linked to the exact sentence and page it came from**. Built for **WarriorHacks 2.0 (Hackathon track)**.
+Fineprint organizes selected passages from a benefits-renewal notice into an evidence index, with **clickable source quotes and page references**. Built for **WarriorHacks 2.0 (Hackathon track)**.
 
 ## Why
 
@@ -14,7 +14,7 @@ Benefit renewal letters bury the important parts — a due date, a checked box, 
 - **Dates are quoted, never decided.** The "Dates & timing mentioned" section is a quote-first index: selected timing excerpts — the sentences around dates and timing instructions — are shown verbatim, in source order, with jumps back to the letter. There is no "Respond by" card — no date is selected, assigned, or judged past/current. Excerpt coverage can be incomplete; always check the full letter. When several timing clauses appear, a generic reminder says to check for conflicting instructions; when none are found, it says "No timing excerpt found by this tool — check the full letter" rather than asserting no deadline exists.
 - Reads a renewal notice **entirely in your browser** — text or PDF, nothing is uploaded, no AI service is called.
 - Extracts: renewal methods (each step only when an exact supporting quote exists), which benefit programs are actually **check-marked**, requested vs. *conditional* documents (conditions quoted verbatim), contact info, and consequence wording.
-- Every checklist item carries a **clickable evidence quote** that jumps to the exact line in the source pane.
+- Extracted passages carry **clickable evidence quotes** that jump to their source lines. General guidance and missing-information notices are labeled separately.
 - Scanned/image-only PDFs get an explicit "can't read this" warning — no OCR guessing, no silent failure.
 
 ## Demo
