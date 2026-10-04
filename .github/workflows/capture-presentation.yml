@@ -1,0 +1,43 @@
+name: Capture Fineprint presentation (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capture:
+    if: github.repository == 'sharonbasovich/fineprint-warriorhacks'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify corrected product source
+        run: |
+          mkdir -p presentation-capture
+          git diff --exit-code 6eeba14485e299233bd31e29e3095577a44718f2 -- src public tests qa index.html package.json package-lock.json vite.config.ts tsconfig.json
+          git rev-parse HEAD > presentation-capture/capture-commit.txt
+          echo 6eeba14485e299233bd31e29e3095577a44718f2 > presentation-capture/product-reference.txt
+          git ls-files -z src public index.html package.json package-lock.json | xargs -0 sha256sum > presentation-capture/product-sha256.txt
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Install isolated capture dependency
+        run: |
+          npm install --no-save --package-lock=false playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Capture real fictional-sample interactions
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/fineprint-preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          node scripts/capture-presentation.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fineprint-presentation-capture
+          path: presentation-capture/
+          retention-days: 7
