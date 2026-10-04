@@ -20,14 +20,14 @@ export const SAMPLES: SampleDef[] = [
     label: "Synthetic: dated renewal (SNAP checked)",
     file: "samples/synthetic-garden-state.txt",
     tag: "synthetic",
-    blurb: "Invented notice with a real due date, a benefit-end date, and conditional documents."
+    blurb: "Invented notice with a stated due date, a benefit-end date, and conditional documents."
   },
   {
     id: "synthetic-conflict",
     label: "Synthetic: two different due dates",
     file: "samples/synthetic-conflicting-dates.txt",
     tag: "synthetic",
-    blurb: "Invented notice whose due-date wording contains two different dates — Fineprint flags the conflict instead of picking one."
+    blurb: "Invented notice with two different due dates. Fineprint shows the detected timing passages and reminds you to check the full letter."
   },
   {
     id: "synthetic-blank",
