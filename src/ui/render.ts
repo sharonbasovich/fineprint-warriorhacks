@@ -38,12 +38,22 @@ export function clearSourceSelection(): void {
   document.querySelector<HTMLElement>("#source-selection")!.textContent = "No source passage selected.";
 }
 
+function keepSourceNavigationFocusVisible(button: HTMLButtonElement): void {
+  button.addEventListener("focus", () => {
+    if (!button.matches(":focus-visible")) return;
+    // Native Tab may arrive while a source jump is still scrolling. Cancel that
+    // pending movement so it cannot carry the newly focused route off screen.
+    button.scrollIntoView({ behavior: "instant", block: "center" });
+  });
+}
+
 function readSourceButton(page: number, lineIndex: number, quote: HTMLElement): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "source-link";
   button.textContent = "Read source";
   button.setAttribute("aria-label", `Read source, page ${page}, line ${lineIndex + 1}`);
+  keepSourceNavigationFocusVisible(button);
   button.addEventListener("click", () => {
     scrollToLine(page, lineIndex, quote);
     selectedSource?.focus({ preventScroll: true });
@@ -136,6 +146,7 @@ function scrollToLine(page: number, lineIndex: number, quote: HTMLElement): void
   returnToQuote.type = "button";
   returnToQuote.className = "source-link return-to-quote";
   returnToQuote.textContent = "Return to quote";
+  keepSourceNavigationFocusVisible(returnToQuote);
   returnToQuote.addEventListener("click", () => {
     if (!originatingQuote?.isConnected) return;
     const card = originatingQuote.closest("details");
