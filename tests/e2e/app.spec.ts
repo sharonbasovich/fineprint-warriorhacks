@@ -113,7 +113,7 @@ test.describe("core flow", () => {
     await expect(page.locator("#status-line")).not.toBeEmpty();
     await page.fill("#paste", SAMPLE_NOTICE);
     await page.click("#analyze-paste");
-    await expect(page.locator("#status-line")).toBeEmpty();
+    await expect(page.locator("#status-line")).toHaveText("Showing results for pasted text.");
     await expect(page.locator("#checklist")).toContainText("11/01/2026");
   });
 

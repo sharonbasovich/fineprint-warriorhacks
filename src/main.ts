@@ -4,7 +4,7 @@ import { extractPdf } from "./core/pdf";
 import { extractText } from "./core/textdoc";
 import { analyze } from "./core/analyze";
 import { SAMPLES } from "./core/samples";
-import { preferredScrollBehavior, renderResult } from "./ui/render";
+import { clearSourceSelection, preferredScrollBehavior, renderResult } from "./ui/render";
 import type { NoticeDocument } from "./core/types";
 import "./style.css";
 
@@ -23,47 +23,69 @@ const dropzone = $<HTMLDivElement>("#dropzone");
 const fileInput = $<HTMLInputElement>("#file-input");
 const pasteArea = $<HTMLTextAreaElement>("#paste");
 
-function setStatus(msg: string, isError = false) {
+let latestRequest = 0;
+type InputState = "idle" | "loading" | "current" | "error";
+
+function setStatus(msg: string, state: InputState = "idle") {
   statusLine.textContent = msg;
-  statusLine.classList.toggle("error", isError);
+  statusLine.classList.toggle("error", state === "error");
+  $("#results").dataset.state = state;
+  $("#results").setAttribute("aria-busy", String(state === "loading"));
 }
 
-async function loadDoc(doc: NoticeDocument) {
+function beginRequest(message: string, sampleId = ""): number {
+  const request = ++latestRequest;
+  sampleSelect.value = sampleId;
+  sampleBlurb.textContent = SAMPLES.find((s) => s.id === sampleId)?.blurb ?? "";
+  clearSourceSelection();
+  $("#results").hidden = true;
+  for (const id of ["doc-title", "doc-sub", "program-chips", "warnings", "source-view", "checklist"]) {
+    $(`#${id}`).replaceChildren();
+  }
+  setStatus(message, "loading");
+  return request;
+}
+
+function failRequest(request: number, message: string): void {
+  if (request === latestRequest) setStatus(message, "error");
+}
+
+function loadDoc(doc: NoticeDocument, request: number): void {
+  // Only the latest input attempt owns the visible result and status.
+  if (request !== latestRequest) return;
   const result = analyze(doc);
   renderResult(doc, result);
-  setStatus("");
-  $("#source-view").scrollTop = 0;
+  setStatus(`Showing results for ${doc.sourceName}.`, "current");
   $("#results").hidden = false;
+  $("#source-view").scrollTop = 0;
   $("#results").scrollIntoView({ behavior: preferredScrollBehavior(), block: "start" });
 }
 
 async function loadSample(id: string) {
   const def = SAMPLES.find((s) => s.id === id);
   if (!def) return;
-  setStatus(`Loading ${def.label}…`);
+  const request = beginRequest(`Loading ${def.label}…`, id);
   try {
     const res = await fetch(def.file);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
     const doc = extractText(text, def.label);
     if (def.tag === "synthetic") doc.warnings.push("Synthetic demonstration document — not a real notice.");
-    setStatus("");
-    await loadDoc(doc);
+    loadDoc(doc, request);
   } catch (e) {
-    setStatus(`Could not load that sample: ${(e as Error).message}`, true);
+    failRequest(request, `Could not load that sample: ${(e as Error).message}`);
   }
 }
 
 async function loadFile(file: File) {
-  setStatus(`Reading ${file.name}…`);
+  const request = beginRequest(`Reading ${file.name}…`);
   const okType =
     /\.(pdf|txt|text)$/i.test(file.name) ||
     file.type === "application/pdf" ||
     file.type === "text/plain";
   if (!okType) {
-    setStatus(
-      `"${file.name}" is not a supported file type — Fineprint reads text PDFs and .txt files only.`,
-      true
+    failRequest(request,
+      `"${file.name}" is not a supported file type — Fineprint reads text PDFs and .txt files only.`
     );
     return;
   }
@@ -78,11 +100,10 @@ async function loadFile(file: File) {
     } else {
       doc = extractText(await file.text(), file.name);
     }
-    await loadDoc(doc);
+    loadDoc(doc, request);
   } catch (e) {
-    setStatus(
-      `Could not read "${file.name}": ${(e as Error).message}. If it is a scanned image PDF, Fineprint cannot read it (no OCR).`,
-      true
+    failRequest(request,
+      `Could not read "${file.name}": ${(e as Error).message}. If it is a scanned image PDF, Fineprint cannot read it (no OCR).`
     );
   }
 }
@@ -95,8 +116,6 @@ for (const s of SAMPLES) {
   sampleSelect.appendChild(opt);
 }
 sampleSelect.addEventListener("change", () => {
-  const def = SAMPLES.find((s) => s.id === sampleSelect.value);
-  sampleBlurb.textContent = def?.blurb ?? "";
   void loadSample(sampleSelect.value);
 });
 
@@ -129,10 +148,15 @@ dropzone.addEventListener("drop", (e) => {
 });
 
 $("#analyze-paste").addEventListener("click", () => {
+  const request = beginRequest("Reading pasted text.");
   const text = pasteArea.value;
   if (!text.trim()) {
-    setStatus("Paste some letter text first.", true);
+    failRequest(request, "Paste some letter text first.");
     return;
   }
-  void loadDoc(extractText(text, "pasted text"));
+  try {
+    loadDoc(extractText(text, "pasted text"), request);
+  } catch (e) {
+    failRequest(request, `Could not read pasted text: ${(e as Error).message}`);
+  }
 });
