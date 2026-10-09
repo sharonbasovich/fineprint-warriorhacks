@@ -20,7 +20,36 @@ const STATUS_LABEL: Record<ItemStatus, { label: string; cls: string }> = {
 
 const PROGRAM_LABEL = { checked: "marked", unchecked: "listed, not marked", undetermined: "not readable" } as const;
 
-let flashTimer: number | undefined;
+let selectedSource: HTMLElement | undefined;
+let originatingQuote: HTMLElement | undefined;
+let returnToQuote: HTMLButtonElement | undefined;
+
+export function preferredScrollBehavior(): ScrollBehavior {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
+}
+
+export function clearSourceSelection(): void {
+  selectedSource?.classList.remove("selected-source", "flash");
+  selectedSource?.removeAttribute("aria-current");
+  returnToQuote?.remove();
+  selectedSource = undefined;
+  originatingQuote = undefined;
+  returnToQuote = undefined;
+  document.querySelector<HTMLElement>("#source-selection")!.textContent = "No source passage selected.";
+}
+
+function readSourceButton(page: number, lineIndex: number, quote: HTMLElement): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "source-link";
+  button.textContent = "Read source";
+  button.setAttribute("aria-label", `Read source, page ${page}, line ${lineIndex + 1}`);
+  button.addEventListener("click", () => {
+    scrollToLine(page, lineIndex, quote);
+    selectedSource?.focus({ preventScroll: true });
+  });
+  return button;
+}
 
 export function renderResult(doc: NoticeDocument, result: AnalysisResult): void {
   renderSource(doc);
@@ -49,7 +78,7 @@ function renderHeader(doc: NoticeDocument, result: AnalysisResult): void {
       chip.tabIndex = 0;
       chip.role = "button";
       chip.title = `“${p.evidence.quote}” — page ${p.evidence.page}`;
-      const go = () => scrollToLine(p.evidence!.page, p.evidence!.lineIndex);
+      const go = () => scrollToLine(p.evidence!.page, p.evidence!.lineIndex, chip);
       chip.addEventListener("click", go);
       chip.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -59,6 +88,7 @@ function renderHeader(doc: NoticeDocument, result: AnalysisResult): void {
       });
     }
     chips.appendChild(chip);
+    if (p.evidence) chips.appendChild(readSourceButton(p.evidence.page, p.evidence.lineIndex, chip));
   }
 
   const warn = document.querySelector<HTMLElement>("#warnings")!;
@@ -72,6 +102,7 @@ function renderHeader(doc: NoticeDocument, result: AnalysisResult): void {
 }
 
 function renderSource(doc: NoticeDocument): void {
+  clearSourceSelection();
   const view = document.querySelector<HTMLElement>("#source-view")!;
   view.innerHTML = "";
   for (const page of doc.pages) {
@@ -84,21 +115,37 @@ function renderSource(doc: NoticeDocument): void {
       div.className = "src-line";
       div.id = `src-${line.page}-${line.lineIndex}`;
       div.textContent = line.text;
+      div.tabIndex = -1;
+      div.addEventListener("animationend", () => div.classList.remove("flash"));
       view.appendChild(div);
     }
   }
 }
 
-function scrollToLine(page: number, lineIndex: number): void {
+function scrollToLine(page: number, lineIndex: number, quote: HTMLElement): void {
   const el = document.getElementById(`src-${page}-${lineIndex}`);
   if (!el) return;
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
-  el.classList.remove("flash");
-  // restart animation
-  void el.offsetWidth;
-  el.classList.add("flash");
-  if (flashTimer) window.clearTimeout(flashTimer);
-  flashTimer = window.setTimeout(() => el.classList.remove("flash"), 2600);
+  clearSourceSelection();
+  selectedSource = el;
+  originatingQuote = quote;
+  el.classList.add("selected-source");
+  el.setAttribute("aria-current", "true");
+  document.querySelector<HTMLElement>("#source-selection")!.textContent =
+    `Selected source: page ${page}, line ${lineIndex + 1}.`;
+  returnToQuote = document.createElement("button");
+  returnToQuote.type = "button";
+  returnToQuote.className = "source-link return-to-quote";
+  returnToQuote.textContent = "Return to quote";
+  returnToQuote.addEventListener("click", () => {
+    if (!originatingQuote?.isConnected) return;
+    const card = originatingQuote.closest("details");
+    if (card) card.open = true;
+    originatingQuote.focus({ preventScroll: true });
+    originatingQuote.scrollIntoView({ behavior: preferredScrollBehavior(), block: "center" });
+  });
+  el.after(returnToQuote);
+  el.scrollIntoView({ behavior: preferredScrollBehavior(), block: "center" });
+  if (preferredScrollBehavior() !== "instant") el.classList.add("flash");
 }
 
 function renderChecklist(result: AnalysisResult): void {
@@ -156,9 +203,12 @@ function renderItem(it: ChecklistItem): HTMLElement {
       const li = document.createElement("li");
       const btn = document.createElement("button");
       btn.className = "ev-quote";
+      btn.type = "button";
+      btn.dataset.sourceId = `src-${e.page}-${e.lineIndex}`;
       btn.innerHTML = `<span class="ev-page">p.${e.page}</span> “${escapeHtml(e.quote)}”`;
-      btn.addEventListener("click", () => scrollToLine(e.page, e.lineIndex));
+      btn.addEventListener("click", () => scrollToLine(e.page, e.lineIndex, btn));
       li.appendChild(btn);
+      li.appendChild(readSourceButton(e.page, e.lineIndex, btn));
       list.appendChild(li);
     }
     body.appendChild(list);

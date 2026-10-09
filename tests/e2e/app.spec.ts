@@ -29,7 +29,7 @@ test.describe("core flow", () => {
     await expect(page.locator("#source-view")).toContainText("Form H1830-R");
   });
 
-  test("every checklist item carries evidence, and clicking it flashes the source line", async ({
+  test("evidence activation durably selects the source line", async ({
     page
   }) => {
     await loadOfficialSample(page);
@@ -38,7 +38,8 @@ test.describe("core flow", () => {
     const quote = item.locator(".ev-quote").first();
     await expect(quote).toBeVisible();
     await quote.click();
-    await expect(page.locator(".src-line.flash")).toHaveCount(1);
+    await expect(page.locator(".src-line.selected-source")).toHaveCount(1);
+    await expect(quote).toBeFocused();
   });
 
   test("paste path analyzes free text", async ({ page }) => {
@@ -112,7 +113,7 @@ test.describe("core flow", () => {
     await expect(page.locator("#status-line")).not.toBeEmpty();
     await page.fill("#paste", SAMPLE_NOTICE);
     await page.click("#analyze-paste");
-    await expect(page.locator("#status-line")).toBeEmpty();
+    await expect(page.locator("#status-line")).toHaveText("Showing results for pasted text.");
     await expect(page.locator("#checklist")).toContainText("11/01/2026");
   });
 
@@ -185,6 +186,6 @@ test.describe("zoom", () => {
     const item = page.locator("details.cl-item").first();
     await item.locator("summary").click();
     await item.locator(".ev-quote").first().click();
-    await expect(page.locator(".src-line.flash")).toHaveCount(1);
+    await expect(page.locator(".src-line.selected-source")).toHaveCount(1);
   });
 });
