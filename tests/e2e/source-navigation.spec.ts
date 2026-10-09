@@ -89,6 +89,42 @@ test("program chip route also restores its own origin", async ({ page }) => {
   await expect(chip).toBeFocused();
 });
 
+for (const viewport of [{ width: 640, height: 450 }, { width: 320, height: 225 }]) {
+  test.describe(`keyboard source scroll at ${viewport.width}px`, () => {
+    test.use({ viewport });
+
+    test("an immediate Tab keeps the focused source route visible after smooth scrolling settles", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.goto("/");
+      await page.selectOption("#sample-select", "synthetic-dated");
+      const item = page.locator("details.cl-item").first();
+      await item.locator("summary").focus();
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Tab");
+      const quote = item.locator(".ev-quote").first();
+      await expect(quote).toBeFocused();
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Tab");
+      const read = quote.locator("..").getByRole("button", { name: /Read source/ });
+      await expect(read).toBeFocused();
+      // This is deliberately a settled assertion: focus was already correct
+      // before the old pending scroll moved the control outside the viewport.
+      await page.waitForTimeout(700);
+      await expect(read).toBeInViewport({ ratio: 1 });
+      await page.keyboard.press("Enter");
+      await expect(page.locator(".selected-source")).toBeFocused();
+      await page.keyboard.press("Tab");
+      const back = page.getByRole("button", { name: "Return to quote" });
+      await expect(back).toBeFocused();
+      await page.waitForTimeout(700);
+      await expect(back).toBeInViewport({ ratio: 1 });
+      await page.keyboard.press("Space");
+      await expect(quote).toBeFocused();
+      await expect(quote).toBeInViewport();
+    });
+  });
+}
+
 test("reduced motion disables JS smooth scrolling, emphasis and chevron transitions", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
