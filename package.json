@@ -21,7 +21,7 @@
     "pdfjs-dist": "5.4.624"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.1",
+    "@playwright/test": "^1.55.1",
     "@types/node": "^24.0.0",
     "eslint": "9.39.5",
     "globals": "^17.12.0",
