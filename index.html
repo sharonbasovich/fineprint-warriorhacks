@@ -65,9 +65,10 @@
         <div id="warnings" class="warnings"></div>
         <div class="panes">
           <div class="pane source-pane">
-            <h3>The notice</h3>
-            <p class="muted small">Click any evidence quote on the right to jump to the exact line here.</p>
-            <div id="source-view" class="source-view" tabindex="0"></div>
+            <h3 id="source-heading">The notice</h3>
+            <p id="source-help" class="muted small">Activate an evidence quote to mark its source. Use Read source to move into the notice, then Return to quote to continue.</p>
+            <p id="source-selection" class="muted small" role="status">No source passage selected.</p>
+            <div id="source-view" class="source-view" role="region" aria-labelledby="source-heading" aria-describedby="source-help source-selection" tabindex="0"></div>
           </div>
           <div class="pane checklist-pane">
             <h3>What the letter says</h3>

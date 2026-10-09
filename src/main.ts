@@ -4,7 +4,7 @@ import { extractPdf } from "./core/pdf";
 import { extractText } from "./core/textdoc";
 import { analyze } from "./core/analyze";
 import { SAMPLES } from "./core/samples";
-import { renderResult } from "./ui/render";
+import { preferredScrollBehavior, renderResult } from "./ui/render";
 import type { NoticeDocument } from "./core/types";
 import "./style.css";
 
@@ -34,7 +34,7 @@ async function loadDoc(doc: NoticeDocument) {
   setStatus("");
   $("#source-view").scrollTop = 0;
   $("#results").hidden = false;
-  $("#results").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("#results").scrollIntoView({ behavior: preferredScrollBehavior(), block: "start" });
 }
 
 async function loadSample(id: string) {

@@ -229,12 +229,34 @@ textarea { resize: vertical; font-family: ui-monospace, monospace; font-size: 0.
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-.src-line.flash { animation: flashline 2.5s ease; }
-@keyframes flashline {
-  0% { background: #ffe08a; }
-  60% { background: #ffe08a; }
-  100% { background: transparent; }
+.src-line.selected-source {
+  background: #ffe08a;
+  box-shadow: inset 4px 0 #735000;
 }
+.src-line:focus-visible { outline-color: #235e87; outline-offset: -2px; }
+.src-line.flash { animation: flashline 600ms ease-out; }
+@keyframes flashline {
+  0% { background: #fff2c9; }
+  100% { background: #ffe08a; }
+}
+.source-link {
+  display: inline-block;
+  min-height: 44px;
+  padding: 0.5rem 0.6rem;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.source-link:hover { border-color: currentColor; }
+.return-to-quote { color: #3d2c00; border-color: #735000; margin: 0.25rem 0; }
+.return-to-quote:focus-visible { outline-color: #235e87; }
+.ev-list li { margin-bottom: 0.65rem; }
 
 .cl-group { margin-bottom: 1.4rem; }
 .cl-group h4 {
@@ -338,6 +360,11 @@ footer {
 
 @media (prefers-contrast: more) {
   :root { --muted: #c3cede; --line: #55688f; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .src-line.flash { animation: none; }
+  .cl-item summary::after { transition: none; }
 }
 
 @media (max-width: 860px) {
