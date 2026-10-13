@@ -34,7 +34,7 @@
       },
       {
         "category": "do",
-        "status": "action",
+        "status": "info",
         "titleContains": "renew",
         "evidenceContains": "time to renew your benefits"
       },

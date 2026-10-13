@@ -352,8 +352,16 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   const methodLines =
     renewIdx >= 0 ? lines.slice(renewIdx, methodEnd) : lines.slice(0, Math.min(lines.length, 40));
 
+  // The same sentence boundaries used for timing keep a soft-wrapped
+  // negation or condition attached to renewal wording. Each source line
+  // remains a separate, verbatim citation and source jump.
+  function renewalEvidence(line: SourceLine): Evidence[] {
+    const [start, end] = sentenceSpan(lines.indexOf(line));
+    return lines.slice(start, end + 1).map(ev);
+  }
+
   if (renewIdx >= 0) {
-    items.push(item("do", "action", "This letter asks you to renew your benefits", [ev(lines[renewIdx]!)]));
+    items.push(item("do", "info", "Renewal wording in the letter", renewalEvidence(lines[renewIdx]!)));
   }
   // method steps only appear inside a section a renewal intro opened, and
   // only on lines whose own words name renewing/form-work — a matched line
@@ -366,12 +374,9 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
         )
       : undefined;
   if (online) {
-    const extra = methodLines.filter(
-      (l) => l.page === online.page && l.lineIndex > online.lineIndex && l.lineIndex <= online.lineIndex + 2
-    );
     items.push(
-      item("do", "action", "Renew online through the website named in the letter", [ev(online), ...extra.map(ev)],
-        "Follow the letter's own steps — Fineprint links you to the exact sentences, not to an outside site.")
+      item("do", "info", "Online renewal wording in the letter", renewalEvidence(online),
+        "Check the quoted wording for online methods, conditions and exceptions. Fineprint links to the source sentences.")
     );
   }
   const mailOrFax =
@@ -383,12 +388,9 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
         )
       : undefined;
   if (mailOrFax) {
-    const extra = methodLines.filter(
-      (l) => l.page === mailOrFax.page && l.lineIndex > mailOrFax.lineIndex && l.lineIndex <= mailOrFax.lineIndex + 2
-    );
     items.push(
-      item("do", "action", "Or return the paper form by mail or fax", [ev(mailOrFax), ...extra.map(ev)],
-        "The letter says the form must be signed — see the quoted lines.")
+      item("do", "info", "Paper-form wording in the letter", renewalEvidence(mailOrFax),
+        "Check the quoted wording for the method, conditions and any signature instructions. Fineprint does not decide which steps apply to you.")
     );
   }
 
@@ -568,13 +570,12 @@ export function analyze(doc: NoticeDocument): AnalysisResult {
   // ---- contacts ----
   const contactSeen = new Set<string>();
   for (const l of lines.slice(0, Math.min(lines.length, 25))) {
-    const label = /^fax\s*:/i.test(l.text) ? "Fax" : /^mail\s*:/i.test(l.text) ? "Write to" : "Call";
     const phones = l.text.match(new RegExp(PHONE.source, "g")) ?? [];
     for (const ph of phones) {
       const clean = ph.trim();
       if (clean.length < 3 || contactSeen.has(clean)) continue;
       contactSeen.add(clean);
-      items.push(item("contacts", "info", `${label} ${clean}`, [ev(l)]));
+      items.push(item("contacts", "info", `Contact number in the letter: ${clean}`, [ev(l)]));
     }
   }
   const mailLine = lines.find(
