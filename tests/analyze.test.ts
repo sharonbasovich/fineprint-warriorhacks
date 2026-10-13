@@ -33,6 +33,46 @@ function excerptText(r: ReturnType<typeof analyze>) {
     .join("\n");
 }
 
+describe("renewal-method labels stay source-grounded", () => {
+  it.each([
+    ["Do not\nreturn your form by mail.", "Paper-form wording in the letter", "Do not"],
+    ["If the online service is unavailable,\nrenew online only after it is restored.", "Online renewal wording in the letter", "If the online service is unavailable,"],
+    ["You do not\nneed to renew your benefits.", "Renewal wording in the letter", "You do not"],
+  ])("keeps wrapped conditions with %s", (wording, title, leadIn) => {
+    const intro = title === "Renewal wording in the letter" ? "CEDAR BENEFITS" : "It is time to renew your benefits.";
+    const r = analyze(extractText(`${intro}\n${wording}`, "wrapped"));
+    const card = r.items.find((i) => i.title === title && i.evidence.some((e) => e.quote.includes(wording.split("\n")[1]!)));
+    expect(card?.evidence.map((e) => e.quote)).toContain(leadIn);
+  });
+  it("does not label a fax number as a voice-call instruction", () => {
+    const quote = "Fax your renewal form to 512-555-0100.";
+    const r = analyze(extractText(`It is time to renew your benefits.\n${quote}`, "fax"));
+    const contact = r.items.find((i) => i.category === "contacts");
+    expect(contact?.title).toBe("Contact number in the letter: 512-555-0100");
+    expect(contact?.evidence[0]?.quote).toBe(quote);
+  });
+  it("does not turn negated renewal wording into an instruction", () => {
+    const r = analyze(extractText("You do not need to renew your benefits.\nDo not renew online through the website.", "negated"));
+    const renewal = r.items.filter((i) => i.category === "do");
+    expect(renewal).toHaveLength(2);
+    expect(renewal.every((i) => i.status === "info")).toBe(true);
+    expect(renewal.map((i) => i.title).join(" ")).not.toMatch(/asks you to renew|renew online through/i);
+    expect(renewal.flatMap((i) => i.evidence.map((e) => e.quote))).toContain("Do not renew online through the website.");
+  });
+  it.each([
+    "Mail your renewal form to the address on this letter.",
+    "Fax your renewal form to 512-555-0100.",
+    "Do not return the form by mail; bring it to your appointment.",
+  ])("does not invent a method or signature requirement for %s", (instruction) => {
+    const r = analyze(extractText(`It is time to renew your benefits.\n${instruction}`, "method"));
+    const paper = r.items.find((i) => i.evidence.some((e) => e.quote === instruction) && i.category === "do");
+    expect(paper).toBeDefined();
+    expect(paper!.title).not.toMatch(/mail or fax|return the paper form/i);
+    expect(paper!.detail).not.toMatch(/must be signed/i);
+    expect(paper!.evidence[0]!.quote).toBe(instruction);
+  });
+});
+
 describe("date extraction (internal mention parsing)", () => {
   it("parses numeric and long-form dates to ISO", () => {
     const m = findDatesInText("due by 04/03/2027 and also June 5, 2027");
@@ -300,7 +340,7 @@ describe("citation integrity", () => {
       expect(isAnnotationText(d.raw), `annotation date: ${d.raw}`).toBe(false);
     }
     // the renew summary must cite the real intro line, not the SOURCE: note
-    const renew = r.items.find((i) => i.title.includes("asks you to renew"));
+    const renew = r.items.find((i) => i.title === "Renewal wording in the letter");
     expect(
       renew?.evidence.some((e) => e.quote.includes("time to renew your benefits"))
     ).toBe(true);

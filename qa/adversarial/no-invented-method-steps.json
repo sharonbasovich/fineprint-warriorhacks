@@ -9,8 +9,9 @@
     "items": [
       {
         "category": "do",
-        "status": "action",
-        "titleContains": "renew your benefits"
+        "status": "info",
+        "titleContains": "Renewal wording",
+        "evidenceContains": "time to renew your benefits"
       },
       {
         "category": "dates",
@@ -26,11 +27,11 @@
     "forbidden": [
       {
         "category": "do",
-        "titleContains": "Renew online"
+        "titleContains": "Online renewal wording"
       },
       {
         "category": "do",
-        "titleContains": "paper form"
+        "titleContains": "Paper-form wording"
       },
       {
         "category": "dates",
